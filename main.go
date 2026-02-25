@@ -29,7 +29,10 @@ func main() {
 	})
 
 	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventMessage) {
-		handleBotMessage(s, event)
+		handleHelpMessage(s, event)
+	})
+	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventMessage) {
+		handlePingMessage(s, event)
 	})
 
 	err = session.Open()
@@ -44,7 +47,32 @@ func main() {
 	<-sc
 }
 
-func handleBotMessage(session *sgo.Session, msg *sgo.EventMessage) {
+func handleHelpMessage(session *sgo.Session, msg *sgo.EventMessage) {
+	if msg.Content != "!help" {
+		return
+	}
+
+	latency := session.WS.Latency()
+	content := "Available commands: !help !ping"
+
+	if latency.Milliseconds() == 0 {
+		content = "Still calculating, keep re-trying this command in 15-second intervals."
+	}
+
+	send := sgo.MessageSend{
+		Content: content,
+	}
+
+	message, err := session.ChannelMessageSend(msg.Channel, send)
+	if err != nil {
+		fmt.Println("Error sending message: ", err)
+		return
+	}
+
+	fmt.Println("Sent message: ", message.Content)
+}
+
+func handlePingMessage(session *sgo.Session, msg *sgo.EventMessage) {
 	if msg.Content != "!ping" {
 		return
 	}
@@ -66,5 +94,5 @@ func handleBotMessage(session *sgo.Session, msg *sgo.EventMessage) {
 		return
 	}
 
-	fmt.Println("Sent message:", message.Content)
+	fmt.Println("Sent message: ", message.Content)
 }
