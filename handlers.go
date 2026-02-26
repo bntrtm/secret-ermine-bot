@@ -58,7 +58,7 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 	case "ping":
 		content = b.handleMsgPing()
 	case "cancel":
-		content = b.handleMsgCancel()
+		content = b.handleMsgCancel(msg)
 	default:
 		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", fields[0])
 	}
@@ -192,9 +192,15 @@ func (b *botStore) handleMsgStart(msg *sgo.EventMessage) string {
 	return content
 }
 
-func (b *botStore) handleMsgCancel() string {
-	if _, ok := b.Events["temp"]; !ok {
+func (b *botStore) handleMsgCancel(msg *sgo.EventMessage) string {
+	sse, ok := b.Events["temp"]
+	if !ok {
 		return "No Secret Santa events exist from this server to cancel."
+	}
+
+	// only the organizer may start the event
+	if msg.Author != sse.Organizer.ID {
+		return ""
 	}
 
 	delete(b.Events, "temp")
