@@ -10,6 +10,7 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
+// getUser returns a user by ID, first trying to pull from cache
 func (b *botStore) getUser(uID string) (*sgo.User, error) {
 	var user *sgo.User
 	user = b.session.State.User(uID)
@@ -22,6 +23,53 @@ func (b *botStore) getUser(uID string) (*sgo.User, error) {
 		return nil, fmt.Errorf("User with ID %s could not be fetched", uID)
 	}
 	return user, nil
+}
+
+// getServer returns a server by ID, first trying to pull from cache
+func (b *botStore) getServer(sID string) (*sgo.Server, error) {
+	var server *sgo.Server
+	server = b.session.State.Server(sID)
+	if server != nil {
+		fmt.Printf("Server %s fetched from cache\n", server.Name)
+		return server, nil
+	}
+	server, err := b.session.Server(sID)
+	if err != nil {
+		return nil, fmt.Errorf("Server with ID %s could not be fetched", sID)
+	}
+	return server, nil
+}
+
+// getChannel returns a channel by ID, first trying to pull from cache
+func (b *botStore) getChannel(cID string) (*sgo.Channel, error) {
+	var channel *sgo.Channel
+	channel = b.session.State.Channel(cID)
+	if channel != nil {
+		fmt.Printf("Channel %s fetched from cache\n", channel.Name)
+		return channel, nil
+	}
+	channel, err := b.session.Channel(cID)
+	if err != nil {
+		return nil, fmt.Errorf("Channel with ID %s could not be fetched", cID)
+	}
+	return channel, nil
+}
+
+// getServerByChannelID wraps channel and server retrieval functions
+// to JUST return the server, or nil with any error encountered
+func (b *botStore) getServerByChannelID(cID string) (*sgo.Server, error) {
+	channel, err := b.getChannel(cID)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	server, err := b.getServer(*channel.Server)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	return server, nil
 }
 
 func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessage) {
@@ -46,10 +94,14 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		fmt.Println("Sent message: ", message.Content)
 
 		if recordJoinMessage {
-			if entry, ok := b.Events["temp"]; ok {
+			server, err := b.getServerByChannelID(message.Channel)
+			if err != nil {
+				return
+			}
+			if entry, ok := b.Events[server.ID]; ok {
 				entry.JoinMessageChannelID = message.Channel
 				entry.JoinMessageID = message.ID
-				b.Events["temp"] = entry
+				b.Events[server.ID] = entry
 			}
 		}
 	}()
@@ -81,8 +133,13 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 // handlerNewSantaSession tells the bot it's time for a new Secret Santa Session!
 // usage: !new <date (YYYY-MM-DD)> <spend_limit>
 func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessage) (string, bool) {
-	if _, ok := b.Events["temp"]; ok {
-		return "A Secret Santa event is already active from this server. Use the '!cancel' command before starting a new one.", false
+	server, err := b.getServerByChannelID(msg.Channel)
+	if err != nil {
+		return "", false
+	}
+
+	if event, ok := b.Events[server.ID]; ok {
+		return fmt.Sprintf("A Secret Santa event organized by %s is already active in this server.\nThey must use the '!cancel' command before setting up a new one.", event.Organizer.Mention()), false
 	}
 
 	var content string
@@ -121,8 +178,7 @@ func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessa
 	content += fmt.Sprintf("\n%s, you can start the event whenever you're ready with '!start', so long as at least THREE participants have joined.", newSSE.Organizer.Mention())
 	content += "\nOr, the event can be canceled with '!cancel'."
 
-	// TODO: get server ID message was sent from to use as key
-	b.Events["temp"] = *newSSE
+	b.Events[server.ID] = *newSSE
 
 	return content, true
 }
@@ -131,7 +187,11 @@ func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessa
 // and creates a set of participants for the Secret Santa event.
 // There must be at least THREE participants for the event to start.
 func (b *botStore) handleMsgStart(msg *sgo.EventMessage) string {
-	sse, ok := b.Events["temp"]
+	server, err := b.getServerByChannelID(msg.Channel)
+	if err != nil {
+		return ""
+	}
+	sse, ok := b.Events[server.ID]
 	if !ok {
 		return "No Secret Santa events exist from this server to start."
 	}
@@ -189,14 +249,14 @@ func (b *botStore) handleMsgStart(msg *sgo.EventMessage) string {
 		}
 	}
 
-	b.Events["temp"] = sse
+	b.Events[server.ID] = sse
 
 	content := fmt.Sprintf("A Secret Santa event organized by %s has begun!", sse.Organizer.Mention())
-	content += fmt.Sprintf("\n%d participants will be notified privately with next steps!", len(b.Events["temp"].Participants))
+	content += fmt.Sprintf("\n%d participants will be notified privately with next steps!", len(b.Events[server.ID].Participants))
 
 	// NOTE: the following is temporary, and exists for debugging purposes!
 	debugLine := "SSE RESULTS: "
-	for uID, p := range b.Events["temp"].Participants {
+	for uID, p := range b.Events[server.ID].Participants {
 		user, err := b.getUser(uID)
 		if err != nil {
 			user = &sgo.User{
@@ -220,7 +280,11 @@ func (b *botStore) handleMsgStart(msg *sgo.EventMessage) string {
 }
 
 func (b *botStore) handleMsgCancel(msg *sgo.EventMessage) string {
-	sse, ok := b.Events["temp"]
+	server, err := b.getServerByChannelID(msg.Channel)
+	if err != nil {
+		return ""
+	}
+	sse, ok := b.Events[server.ID]
 	if !ok {
 		return "No Secret Santa events exist from this server to cancel."
 	}
@@ -230,7 +294,7 @@ func (b *botStore) handleMsgCancel(msg *sgo.EventMessage) string {
 		return ""
 	}
 
-	delete(b.Events, "temp")
+	delete(b.Events, server.ID)
 	return "Canceled existing Secret Santa event."
 }
 
