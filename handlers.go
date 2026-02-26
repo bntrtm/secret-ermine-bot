@@ -10,6 +10,20 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
+func (b *botStore) getUser(uID string) (*sgo.User, error) {
+	var user *sgo.User
+	user = b.session.State.User(uID)
+	if user != nil {
+		fmt.Printf("User %s fetched from cache\n", user.Username)
+		return user, nil
+	}
+	user, err := b.session.User(uID)
+	if err != nil {
+		return nil, fmt.Errorf("User with ID %s could not be fetched", uID)
+	}
+	return user, nil
+}
+
 func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessage) {
 	var content string
 	recordJoinMessage := false
@@ -92,10 +106,12 @@ func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessa
 		Participants: map[string]Participant{},
 	}
 	newSSE.OrganizationDate = time.Now().String()
-	newSSE.Organizer, err = b.session.User(msg.Author)
+	caller, err := b.getUser(msg.Author)
 	if err != nil {
-		newSSE.Organizer = &sgo.User{Username: "UNKNOWN"}
+		fmt.Println(err)
+		return "", false
 	}
+	newSSE.Organizer = caller
 	newSSE.DistributionDate = distributionDate.Format("2006-01-02")
 	newSSE.SpendLimit = spendLimit
 
@@ -181,11 +197,22 @@ func (b *botStore) handleMsgStart(msg *sgo.EventMessage) string {
 	// NOTE: the following is temporary, and exists for debugging purposes!
 	debugLine := "SSE RESULTS: "
 	for uID, p := range b.Events["temp"].Participants {
-		user, err := b.session.User(uID)
+		user, err := b.getUser(uID)
 		if err != nil {
-			user = &sgo.User{}
+			user = &sgo.User{
+				ID:       "UNKNOWN",
+				Username: "UNKNOWN",
+			}
 		}
-		debugLine += fmt.Sprintf("\n%s is the Secret Santa of giftee: %s. Their Secret Santa is: %s", user.Username, p.Giftee, p.SecretSanta)
+		giftee, err := b.getUser(p.Giftee)
+		if err != nil {
+			giftee = &sgo.User{Username: p.Giftee}
+		}
+		santa, err := b.getUser(p.SecretSanta)
+		if err != nil {
+			santa = &sgo.User{Username: p.SecretSanta}
+		}
+		debugLine += fmt.Sprintf("\n%s is the Secret Santa of giftee: %s. Their Secret Santa is: %s", user.Username, giftee.Username, santa.Username)
 	}
 	fmt.Println(debugLine)
 
