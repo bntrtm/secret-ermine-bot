@@ -40,14 +40,8 @@ func main() {
 	sgo.AddHandler(bot.session, func(s *sgo.Session, event *sgo.EventReady) {
 		fmt.Printf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers))
 	})
-	sgo.AddHandler(bot.session, func(s *sgo.Session, event *sgo.EventMessage) {
-		handleHelpMessage(s, event)
-	})
-	sgo.AddHandler(bot.session, func(s *sgo.Session, event *sgo.EventMessage) {
-		handlePingMessage(s, event)
-	})
 
-	sgo.AddHandler(bot.session, bot.handlerNewSantaSession)
+	sgo.AddHandler(bot.session, bot.handlerEventMessage)
 
 	err = bot.session.Open()
 	if err != nil {
@@ -81,10 +75,44 @@ type SecretSantaSession struct {
 
 // handlerNewSantaSession tells the bot it's time for a new Secret Santa Session!
 // usage: !new <date (YYYY-MM-DD)> <spend_limit>
-
-func (b *botStore) handlerNewSantaSession(session *sgo.Session, msg *sgo.EventMessage) {
+func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessage) string {
 	var content string
-	var err error
+
+	if len(args) != 2 {
+		content = fmt.Sprintf("Argument mismatch; expected 2, but got %d", len(args))
+		return content
+	}
+
+	dateInput := args[0]
+	spendLimit := args[1]
+
+	distributionDate, err := time.Parse("2006-01-02", dateInput)
+	if err != nil {
+		fmt.Println("Could not parse distribution date provided as time.Time")
+		content = fmt.Sprintf("Bad date input '%s'. Please use the format: YYYY-MM-DD", dateInput)
+		return content
+	}
+
+	newSSE := &SecretSantaSession{}
+	newSSE.OrganizationDate = time.Now().String()
+	newSSE.Organizer, err = b.session.User(msg.Author)
+	if err != nil {
+		newSSE.Organizer = &sgo.User{Username: "UNKNOWN"}
+	}
+	newSSE.DistributionDate = distributionDate.Format("2006-01-02")
+	newSSE.SpendLimit = spendLimit
+
+	content = fmt.Sprintf("%s is organizing a Secret Santa event! It will take place on %s.", newSSE.Organizer.Mention(), newSSE.DistributionDate)
+	content += "\nTo join, react to this message!"
+	content += fmt.Sprintf("\nPlease limit your spending according to: %s", newSSE.SpendLimit)
+	content += fmt.Sprintf("\n%s, you can start the event whenever you're ready with '!start', so long as at least THREE participants have joined.", newSSE.Organizer.Mention())
+	content += "\nOr, the event can be canceled with '!cancel'."
+
+	return content
+}
+
+func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessage) {
+	var content string
 
 	// always try to send ANY existing message in the content buffer, if present
 	defer func() {
@@ -95,7 +123,7 @@ func (b *botStore) handlerNewSantaSession(session *sgo.Session, msg *sgo.EventMe
 			Content: content,
 		}
 
-		message, err := session.ChannelMessageSend(msg.Channel, send)
+		message, err := b.session.ChannelMessageSend(msg.Channel, send)
 		if err != nil {
 			fmt.Println("Error sending message: ", err)
 		}
@@ -103,86 +131,34 @@ func (b *botStore) handlerNewSantaSession(session *sgo.Session, msg *sgo.EventMe
 		fmt.Println("Sent message: ", message.Content)
 	}()
 
-	if !strings.HasPrefix(msg.Content, "!new") {
+	if !strings.HasPrefix(msg.Content, "!") {
 		return
 	}
 
 	fields := strings.Split(msg.Content, " ")
-	if fields[0] != "!new" {
+	command, args := strings.TrimPrefix(fields[0], "!"), fields[1:]
+	switch command {
+	case "new":
+		content = b.handleNewSantaEventMessage(args, msg)
+	case "help":
+		content = b.handleMsgHelp()
+	case "ping":
+		content = b.handleMsgPing()
+	default:
 		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", fields[0])
-		return
 	}
-
-	argCount := len(fields) - 1
-
-	if argCount != 2 {
-		content = fmt.Sprintf("Missing arguments; expected 2, but got %d", argCount)
-		return
-	}
-
-	distributionDate, err := time.Parse("2006-01-02", fields[1])
-	if err != nil {
-		fmt.Println("Could not parse distribution date provided as time.Time")
-		content = fmt.Sprintf("Bad date input '%s'. Please use the format: YYYY-MM-DD", fields[1])
-		return
-	}
-
-	newSSE := &SecretSantaSession{}
-	newSSE.OrganizationDate = time.Now().String()
-	newSSE.Organizer, err = session.User(msg.Author)
-	if err != nil {
-		newSSE.Organizer = &sgo.User{Username: "UNKNOWN"}
-	}
-	newSSE.DistributionDate = distributionDate.Format("2006-01-02")
-
-	content = fmt.Sprintf("%s is organizing a Secret Santa event! It will take place on %s.", newSSE.Organizer.Mention(), newSSE.DistributionDate)
-	content += "\nTo join, react to this message!"
-	content += fmt.Sprintf("\nPlease limit your spending according to the following: %s", newSSE.SpendLimit)
-	content += fmt.Sprintf("\n%s, you can start the event whenever you're ready with '!start', so long as at least THREE participants have joined.", newSSE.Organizer.Mention())
-	content += "\nOr, the event can be canceled with '!cancel'."
 }
 
-func handleHelpMessage(session *sgo.Session, msg *sgo.EventMessage) {
-	if msg.Content != "!help" {
-		return
-	}
-
-	content := "Available commands: !help !ping"
-
-	send := sgo.MessageSend{
-		Content: content,
-	}
-
-	message, err := session.ChannelMessageSend(msg.Channel, send)
-	if err != nil {
-		fmt.Println("Error sending message: ", err)
-		return
-	}
-
-	fmt.Println("Sent message: ", message.Content)
+func (b *botStore) handleMsgHelp() string {
+	return "Available commands: !help !ping !new"
 }
 
-func handlePingMessage(session *sgo.Session, msg *sgo.EventMessage) {
-	if msg.Content != "!ping" {
-		return
-	}
-
-	latency := session.WS.Latency()
-	content := latency.String()
+func (b *botStore) handleMsgPing() string {
+	latency := b.session.WS.Latency()
 
 	if latency.Milliseconds() == 0 {
-		content = "Still calculating, keep re-trying this command in 15-second intervals."
+		return "Still calculating, keep re-trying this command in 15-second intervals."
 	}
 
-	send := sgo.MessageSend{
-		Content: content,
-	}
-
-	message, err := session.ChannelMessageSend(msg.Channel, send)
-	if err != nil {
-		fmt.Println("Error sending message: ", err)
-		return
-	}
-
-	fmt.Println("Sent message: ", message.Content)
+	return b.session.WS.Latency().String()
 }
