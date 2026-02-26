@@ -42,6 +42,8 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		content = b.handleMsgHelp()
 	case "ping":
 		content = b.handleMsgPing()
+	case "cancel":
+		content = b.handleMsgCancel()
 	default:
 		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", fields[0])
 	}
@@ -50,6 +52,10 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 // handlerNewSantaSession tells the bot it's time for a new Secret Santa Session!
 // usage: !new <date (YYYY-MM-DD)> <spend_limit>
 func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessage) string {
+	if _, ok := b.Events["temp"]; ok {
+		return "A Secret Santa event is already active from this server. Use the '!cancel' command before starting a new one."
+	}
+
 	var content string
 
 	if len(args) != 2 {
@@ -67,7 +73,7 @@ func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessa
 		return content
 	}
 
-	newSSE := &SecretSantaSession{}
+	newSSE := &SecretSantaEvent{}
 	newSSE.OrganizationDate = time.Now().String()
 	newSSE.Organizer, err = b.session.User(msg.Author)
 	if err != nil {
@@ -82,7 +88,19 @@ func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessa
 	content += fmt.Sprintf("\n%s, you can start the event whenever you're ready with '!start', so long as at least THREE participants have joined.", newSSE.Organizer.Mention())
 	content += "\nOr, the event can be canceled with '!cancel'."
 
+	// TODO: get server ID message was sent from to use as key
+	b.Events["temp"] = *newSSE
+
 	return content
+}
+
+func (b *botStore) handleMsgCancel() string {
+	if _, ok := b.Events["temp"]; !ok {
+		return "No Secret Santa events exist from this server to cancel."
+	}
+
+	delete(b.Events, "temp")
+	return "Canceled existing Secret Santa event."
 }
 
 func (b *botStore) handleMsgHelp() string {

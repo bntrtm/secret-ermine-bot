@@ -8,7 +8,7 @@ type botStore struct {
 	session *sgo.Session
 
 	Token  string
-	Events map[string]SecretSantaSession // map of servers to secret-santa events (limited to one active SSE/server)
+	Events map[string]SecretSantaEvent // map of servers to secret-santa events (limited to one active SSE/server)
 }
 
 type Participant struct {
@@ -18,7 +18,7 @@ type Participant struct {
 	About       string `json:"about"`        // a short message from this participant addressing gift ideas for them
 }
 
-type SecretSantaSession struct {
+type SecretSantaEvent struct {
 	Organizer        *sgo.User     `json:"organizer"`         // user that started the session
 	OrganizationDate string        `json:"organization_date"` // timestring referring to the date & time the session began
 	DistributionDate string        `json:"distribution_date"` // timestring referring to the date & time gifts will be distributed

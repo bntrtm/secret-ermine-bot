@@ -20,7 +20,7 @@ func main() {
 	}
 
 	bot := &botStore{
-		Events: make(map[string]SecretSantaSession),
+		Events: make(map[string]SecretSantaEvent),
 		Token:  os.Getenv("BOT_TOKEN"),
 	}
 
