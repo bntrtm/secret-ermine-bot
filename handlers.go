@@ -119,6 +119,8 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		recordJoinMessage = success
 	case "start":
 		content = b.handleMsgStart(msg)
+	case "status":
+		content = b.handleMsgStatus(msg)
 	case "help":
 		content = b.handleMsgHelp()
 	case "ping":
@@ -181,6 +183,42 @@ func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessa
 	b.Events[server.ID] = *newSSE
 
 	return content, true
+}
+
+func (b *botStore) handleMsgStatus(msg *sgo.EventMessage) string {
+	var content string
+
+	server, err := b.getServerByChannelID(msg.Channel)
+	if err != nil {
+		return ""
+	}
+	sse, ok := b.Events[server.ID]
+	if !ok {
+		content = fmt.Sprintf("No Secret Santa events are currently active in the %s serer.", server.Name)
+		content += "One may be initiated with the '!new' command."
+		return content
+	}
+
+	details := fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Spending Limit: %s", sse.DistributionDate, sse.SpendLimit)
+	if len(sse.Participants) >= 3 {
+		content = fmt.Sprintf("The Secret Santa event organized by %s has started, involving %d participants!", sse.Organizer.Mention(), len(sse.Participants))
+		_, ok := sse.Participants[msg.Author]
+		if ok {
+			caller, err := b.getUser(msg.Author)
+			if err == nil {
+				content += fmt.Sprintf("\nYou, %s, are one of them!", caller.Mention())
+			}
+		}
+		content += "\nOne may be initiated with the '!new' command."
+		return content
+	} else {
+		joinMessageLink := fmt.Sprintf("[join message](%s)", sgo.EndpointChannelMessage(sse.JoinMessageChannelID, sse.JoinMessageID))
+		content = fmt.Sprintf("A Secret Santa event organized by %s is active, and awaiting more participants.", sse.Organizer.Mention())
+		content += fmt.Sprintf("\nNew participants may join by reacting to the %s I sent to the '%s' channel!", joinMessageLink, sse.JoinMessageChannelID)
+	}
+	content += "\n" + details
+
+	return content
 }
 
 // handleMsgStart reads all unique reactions on the join message,
