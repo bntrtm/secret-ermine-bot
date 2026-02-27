@@ -216,9 +216,16 @@ func (b *botStore) handleMsgStatus(msg *sgo.EventMessage) string {
 		content += "\nOne may be initiated with the '!new' command."
 		return content
 	} else {
-		joinMessageLink := fmt.Sprintf("[join message](%s)", sgo.EndpointChannelMessage(sse.JoinMessageChannelID, sse.JoinMessageID))
+		channelName := ""
+		channel, err := b.getChannel(sse.JoinMessageChannelID)
+		if err != nil {
+			channelName = "???"
+		} else {
+			channelName = channel.Name
+		}
+		joinMessageLink := fmt.Sprintf("[join message](%s%s)", sgo.BaseURL(), sgo.EndpointChannelMessage(sse.JoinMessageChannelID, sse.JoinMessageID))
 		content = fmt.Sprintf("A Secret Santa event organized by %s is active, and awaiting more participants.", sse.Organizer.Mention())
-		content += fmt.Sprintf("\nNew participants may join by reacting to the %s I sent to the '%s' channel!", joinMessageLink, sse.JoinMessageChannelID)
+		content += fmt.Sprintf("\nNew participants may join by reacting to the %s I sent to the '%s' channel!", joinMessageLink, channelName)
 	}
 	content += "\n" + details
 
