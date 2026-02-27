@@ -3,14 +3,6 @@ package main
 // 'sgo' as in "stoat go"
 import sgo "github.com/sentinelb51/revoltgo"
 
-// botStore tracks persistent data related to the bot's activity across one or more servers
-type botStore struct {
-	session *sgo.Session
-
-	Token  string
-	Events map[string]SecretSantaEvent // map of servers to secret-santa events (limited to one active SSE/server)
-}
-
 type Participant struct {
 	SecretSanta string `json:"secret_santa"` // user tasked with getting this participant a gift
 	Giftee      string `json:"giftee"`       // user this participant is tasked with giving a gift to
