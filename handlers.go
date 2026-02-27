@@ -106,12 +106,16 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		}
 	}()
 
-	if !strings.HasPrefix(msg.Content, "!") {
+	// command calls to the bot must first mention it
+	self := b.session.State.Self()
+	expectedPrefix := fmt.Sprintf("%s !", self.Mention())
+
+	if !strings.HasPrefix(msg.Content, expectedPrefix) {
 		return
 	}
 
 	fields := strings.Split(msg.Content, " ")
-	command, args := strings.TrimPrefix(fields[0], "!"), fields[1:]
+	command, args := strings.TrimPrefix(fields[1], "!"), fields[2:]
 	switch command {
 	case "new":
 		success := false
