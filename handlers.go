@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
+	"slices"
 	"strings"
 	"time"
 
@@ -137,13 +137,13 @@ func (b *botStore) handleMsgStatus(msg *sgo.EventMessage) string {
 	sse, ok := b.Events[server.ID]
 	if !ok {
 		content = fmt.Sprintf("No Secret Santa events are currently active in the %s serer.", server.Name)
-		content += "One may be initiated with the '!new' command."
+		content += "\nOne may be initiated with the '!new' command."
 		return content
 	}
 
 	details := fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Spending Limit: %s", sse.DistributionDate, sse.SpendLimit)
-	if len(sse.Participants) >= 3 {
-		content = fmt.Sprintf("The Secret Santa event organized by %s has started, involving %d participants!", sse.Organizer.Mention(), len(sse.Participants))
+	if sse.hasStarted() {
+		content = fmt.Sprintf("The Secret Santa event organized by %s has started, with %d participants!", sse.Organizer.Mention(), len(sse.Participants))
 		_, ok := sse.Participants[msg.Author]
 		if ok {
 			caller, err := b.getUser(msg.Author)
@@ -151,8 +151,6 @@ func (b *botStore) handleMsgStatus(msg *sgo.EventMessage) string {
 				content += fmt.Sprintf("\nYou, %s, are one of them!", caller.Mention())
 			}
 		}
-		content += "\nOne may be initiated with the '!new' command."
-		return content
 	} else {
 		channelName := ""
 		channel, err := b.getChannel(sse.JoinMessageChannelID)
@@ -195,73 +193,40 @@ func (b *botStore) handleMsgStart(msg *sgo.EventMessage) string {
 	fmt.Println("Found joinMessage: " + joinMessage.Content)
 
 	recorded := []string{}
+	fmt.Printf("There are %d total reactions to evaluate!\n", len(joinMessage.Reactions))
 	for r, uIDs := range joinMessage.Reactions {
 		fmt.Println("Evaluating emoji reaction: " + r)
 		for _, uID := range uIDs {
-			if _, exists := sse.Participants[uID]; !exists {
+			fmt.Printf("uID %s reacted with %s...\n", uID, r)
+			if exists := slices.Contains(recorded, uID); !exists {
+				fmt.Printf("uID %s now being recorded as participant...\n", uID)
 				recorded = append(recorded, uID)
-				sse.Participants[uID] = Participant{}
 			}
 		}
 	}
 
 	if len(recorded) < 3 {
 		content := "Uh oh! The Secret Santa event doesn't have enough participants. Use '!start' when there are at least three who have joined by reacting to the join message."
-		content += fmt.Sprintf("\nParticipants: %d", len(recorded))
+		content += fmt.Sprintf("\nParticipant signups: %d", len(recorded))
 		return content
 	}
 
-	// shuffle recorded set of participants
-	for i := range recorded {
-		j := rand.Intn(i + 1)
-		recorded[i], recorded[j] = recorded[j], recorded[i]
-	}
+	sse.assignParticipants(recorded)
 
-	for i, uID := range recorded {
-		if pt, ok := sse.Participants[uID]; ok {
-			gifteeIndex := i + 1
-			// if I'm last, my giftee is the first participant
-			if i == len(recorded)-1 {
-				gifteeIndex = 0
-			}
-			pt.Giftee = recorded[gifteeIndex]
-			// assuming they're a participant...
-			if ptGiftee, ok := sse.Participants[pt.Giftee]; ok {
-				// tell the system I'm their Secret Santa...
-				ptGiftee.SecretSanta = uID
-				sse.Participants[pt.Giftee] = ptGiftee
-			}
-			// ...and tell the system I know who my giftee is
-			sse.Participants[uID] = pt
-		}
-	}
+	// NOTE: this call is for debugging purposes!
+	sse.printParticipantMapping(b)
 
 	b.Events[server.ID] = sse
+	err = b.syncEventParticipants(server.ID)
+	if err != nil {
+		return "ERROR: could not sync event participants."
+	}
 
 	content := fmt.Sprintf("A Secret Santa event organized by %s has begun!", sse.Organizer.Mention())
 	content += fmt.Sprintf("\n%d participants will be notified privately with next steps!", len(b.Events[server.ID].Participants))
 
-	// NOTE: the following is temporary, and exists for debugging purposes!
-	debugLine := "SSE RESULTS: "
-	for uID, p := range b.Events[server.ID].Participants {
-		user, err := b.getUser(uID)
 		if err != nil {
-			user = &sgo.User{
-				ID:       "UNKNOWN",
-				Username: "UNKNOWN",
-			}
 		}
-		giftee, err := b.getUser(p.Giftee)
-		if err != nil {
-			giftee = &sgo.User{Username: p.Giftee}
-		}
-		santa, err := b.getUser(p.SecretSanta)
-		if err != nil {
-			santa = &sgo.User{Username: p.SecretSanta}
-		}
-		debugLine += fmt.Sprintf("\n%s is the Secret Santa of giftee: %s. Their Secret Santa is: %s", user.Username, giftee.Username, santa.Username)
-	}
-	fmt.Println(debugLine)
 
 	return content
 }

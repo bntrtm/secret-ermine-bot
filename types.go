@@ -1,7 +1,12 @@
 package main
 
 // 'sgo' as in "stoat go"
-import sgo "github.com/sentinelb51/revoltgo"
+import (
+	"fmt"
+	"strings"
+
+	sgo "github.com/sentinelb51/revoltgo"
+)
 
 type Participant struct {
 	SecretSanta string `json:"secret_santa"` // user tasked with getting this participant a gift
@@ -20,4 +25,67 @@ type SecretSantaEvent struct {
 	// Spend limit not enforced with Int parsing and such because currency validation
 	// for something this simple just seems unnecessary
 	SpendLimit string // a user-input string detailing monetary spending limits for the Secret Santa event
+}
+
+func (sse *SecretSantaEvent) hasStarted() bool {
+	return len(sse.Participants) >= 3
+}
+
+// assignParticipants shuffles a slice of user IDs
+// and then registers them as participants,
+// assigning each a Giftee and Secret Santa.
+func (sse *SecretSantaEvent) assignParticipants(uIDs []string) {
+	shuffleStrings(uIDs)
+
+	for i, uID := range uIDs {
+		sse.Participants[uID] = Participant{}
+		if pt, ok := sse.Participants[uID]; ok {
+			gifteeIndex := i + 1
+			// if I'm last, my giftee is the first participant
+			if i == len(uIDs)-1 {
+				gifteeIndex = 0
+			}
+			pt.Giftee = uIDs[gifteeIndex]
+			// assuming they're a participant...
+			if ptGiftee, ok := sse.Participants[pt.Giftee]; ok {
+				// tell the system I'm their Secret Santa...
+				ptGiftee.SecretSanta = uID
+				sse.Participants[pt.Giftee] = ptGiftee
+			}
+			// ...and tell the system I know who my giftee is
+			sse.Participants[uID] = pt
+		}
+	}
+}
+
+// printParticipantMap outputs the relationships of
+// each participant to each other.
+// EG, for each participant, outputs their giftee and
+// Secret Santa.
+// If a botStore pointer is provided, user IDs in the
+// output will be converted to their human-readable
+// usernames.
+func (sse *SecretSantaEvent) printParticipantMapping(b *botStore) {
+	getName := func(uID string) string {
+		if b != nil {
+			user, err := b.getUser(uID)
+			if err != nil {
+				return uID
+			}
+			return user.Username
+		} else {
+			return uID
+		}
+	}
+
+	var output strings.Builder
+	output.WriteString("PARTICIPANT MAPPING:")
+	for uID, p := range sse.Participants {
+		participant := getName(uID)
+		giftee := getName(p.Giftee)
+		santa := getName(p.SecretSanta)
+		fmt.Fprintf(&output, "\n%s is the Secret Santa of giftee: %s. Their Secret Santa is: %s", participant, giftee, santa)
+	}
+
+	fmt.Println(output)
 }

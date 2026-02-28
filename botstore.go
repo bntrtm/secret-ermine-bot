@@ -11,8 +11,33 @@ import (
 type botStore struct {
 	session *sgo.Session
 
-	Token  string
-	Events map[string]SecretSantaEvent // map of servers to secret-santa events (limited to one active SSE/server)
+	Token               string
+	Events              map[string]SecretSantaEvent    // map of servers to secret-santa events (limited to one active SSE/server)
+	TrackedParticipants map[string]map[string]struct{} // map of user IDs to sets of Server IDs; useful in DM correspondence when bot needs to discern what the relevant event is
+}
+
+// syncEventParticipants syncs participants from an event
+// defined by the given server ID with those whose IDs are
+// used as keys in the TrackedParticipants map
+func (b *botStore) syncEventParticipants(sID string) error {
+	sse, ok := b.Events[sID]
+	if !ok {
+		return fmt.Errorf("trackEventParticipants(sID): no existing event defined by given server ID")
+	}
+
+	for k := range sse.Participants {
+		// do we know this user is tracked at all?
+		if _, ok := b.TrackedParticipants[k]; !ok {
+			// if not, track them
+			b.TrackedParticipants[k] = map[string]struct{}{}
+		}
+		// be sure we're tracking that they're a participant in this event
+		b.TrackedParticipants[k][sID] = struct{}{}
+	}
+
+	return nil
+}
+
 }
 
 // getUser returns a user by ID, first trying to pull from cache
