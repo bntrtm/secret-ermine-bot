@@ -50,7 +50,7 @@ func (b *botStore) getUser(uID string) (*sgo.User, error) {
 	}
 	user, err := b.session.User(uID)
 	if err != nil {
-		return nil, fmt.Errorf("User with ID %s could not be fetched", uID)
+		return nil, fmt.Errorf("user with ID %s could not be fetched", uID)
 	}
 	return user, nil
 }
@@ -65,7 +65,7 @@ func (b *botStore) getServer(sID string) (*sgo.Server, error) {
 	}
 	server, err := b.session.Server(sID)
 	if err != nil {
-		return nil, fmt.Errorf("Server with ID %s could not be fetched", sID)
+		return nil, fmt.Errorf("server with ID %s could not be fetched", sID)
 	}
 	return server, nil
 }
@@ -80,7 +80,7 @@ func (b *botStore) getChannel(cID string) (*sgo.Channel, error) {
 	}
 	channel, err := b.session.Channel(cID)
 	if err != nil {
-		return nil, fmt.Errorf("Channel with ID %s could not be fetched", cID)
+		return nil, fmt.Errorf("channel with ID %s could not be fetched", cID)
 	}
 	return channel, nil
 }
