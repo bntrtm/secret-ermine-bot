@@ -44,20 +44,41 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		}
 	}()
 
-	// command calls to the bot must first mention it
+	var command string
+	var args []string
+	fields := strings.Split(msg.Content, " ")
+
+	// command calls to the bot must first mention it,
+	// unless the channel is a DM channel
+
 	self := b.session.State.Self()
 	expectedPrefix := fmt.Sprintf("%s !", self.Mention())
 
 	if !strings.HasPrefix(msg.Content, expectedPrefix) {
-		return
+		// NO mention... is it worth evaluating whether this is a DM channel?
+		expectedPrefix = "!"
+		if !strings.HasPrefix(msg.Content, expectedPrefix) {
+			return
+		}
+		channel, err := b.getChannel(msg.Channel)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		// abort if not DM channel; doesn't matter that the prefix
+		// is otherwise valid
+		if channel.ChannelType != sgo.ChannelTypeDM {
+			return
+		}
+		command, args = strings.TrimPrefix(fields[0], "!"), fields[1:]
+	} else {
+		command, args = strings.TrimPrefix(fields[1], "!"), fields[2:]
 	}
 
-	fields := strings.Split(msg.Content, " ")
-	command, args := strings.TrimPrefix(fields[1], "!"), fields[2:]
 	switch command {
 	case "new":
 		success := false
-		content, success = b.handleNewSantaEventMessage(args, msg)
+		content, success = b.handleMsgNew(args, msg)
 		recordJoinMessage = success
 	case "start":
 		content = b.handleMsgStart(msg)
@@ -69,14 +90,48 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		content = b.handleMsgPing()
 	case "cancel":
 		content = b.handleMsgCancel(msg)
+	case "msg:santa":
+		channel, err := b.getChannel(msg.Channel)
+		if err != nil {
+			return
+		}
+		if channel.ChannelType != sgo.ChannelTypeDM {
+			return
+		}
+		sID, err := b.findParticipantEvent(msg.Author, "")
+		if err != nil {
+			return
+		}
+
+		sse, ok := b.Events[sID]
+		if !ok {
+			return
+		} else if !sse.hasStarted() {
+			content = "The Secret Santa event has not started yet!"
+		}
+
+		caller, err := b.getUser(msg.Author)
+		if err != nil {
+			fmt.Printf("failed to message a santa on behalf of unknown user with ID: %s\n", msg.Author)
+			return
+		}
+
+		err = b.sendDM(&sgo.MessageSend{
+			Content: strings.TrimPrefix(msg.Content, expectedPrefix),
+		}, sse.Participants[msg.Author].SecretSanta)
+		if err != nil {
+			fmt.Printf("failed to message a santa on behalf of user: %s\n", caller.Username)
+			return
+		}
+		content = "I've sent your message to your Secret Santa!"
 	default:
 		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", fields[0])
 	}
 }
 
-// handlerNewSantaSession tells the bot it's time for a new Secret Santa Session!
+// handleMsgNew tells the bot it's time for a new Secret Santa Session!
 // usage: !new <date (YYYY-MM-DD)> <spend_limit>
-func (b *botStore) handleNewSantaEventMessage(args []string, msg *sgo.EventMessage) (string, bool) {
+func (b *botStore) handleMsgNew(args []string, msg *sgo.EventMessage) (string, bool) {
 	server, err := b.getServerByChannelID(msg.Channel)
 	if err != nil {
 		return "", false
@@ -225,8 +280,12 @@ func (b *botStore) handleMsgStart(msg *sgo.EventMessage) string {
 	content := fmt.Sprintf("A Secret Santa event organized by %s has begun!", sse.Organizer.Mention())
 	content += fmt.Sprintf("\n%d participants will be notified privately with next steps!", len(b.Events[server.ID].Participants))
 
+	go func() {
+		err = b.notifySantas(server)
 		if err != nil {
+			fmt.Println("ERROR: " + err.Error())
 		}
+	}()
 
 	return content
 }
@@ -247,11 +306,12 @@ func (b *botStore) handleMsgCancel(msg *sgo.EventMessage) string {
 	}
 
 	delete(b.Events, server.ID)
+	b.cleanTrackedParticipants()
 	return "Canceled existing Secret Santa event."
 }
 
 func (b *botStore) handleMsgHelp() string {
-	return "Available commands: !help !new !start !cancel !ping"
+	return "Available commands:\n-!help\n-!new\n-!start\n-!status\n-!cancel\n-!ping"
 }
 
 func (b *botStore) handleMsgPing() string {

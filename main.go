@@ -20,8 +20,9 @@ func main() {
 	}
 
 	bot := &botStore{
-		Events: map[string]SecretSantaEvent{},
-		Token:  os.Getenv("BOT_TOKEN"),
+		Events:              map[string]SecretSantaEvent{},
+		TrackedParticipants: map[string]map[string]struct{}{},
+		Token:               os.Getenv("BOT_TOKEN"),
 	}
 
 	// start a new sgo session
