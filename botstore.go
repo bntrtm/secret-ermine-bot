@@ -135,15 +135,16 @@ func (b *botStore) notifySantas(server *sgo.Server) error {
 	for uID, pt := range sse.Participants {
 		giftee, err := b.getUser(pt.Giftee)
 		if err != nil {
-			return err
+			fmt.Println(err)
+			continue
 		}
 		send.Embeds[0].Description = fmt.Sprintf(dsc, sse.Organizer.Mention(), server.Name, giftee.Mention())
 		err = b.sendDM(send, uID)
 		if err == nil {
 			sendCount += 1
+			fmt.Printf("Sent notifications to %d/%d Secret Santas.\n", sendCount, len(sse.Participants))
 		}
 	}
-	fmt.Printf("Sent notifications to %d/%d Secret Santas.\n", sendCount, len(sse.Participants))
 
 	return nil
 }
