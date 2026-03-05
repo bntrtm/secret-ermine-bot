@@ -116,18 +116,13 @@ func (b *botStore) notifySantas(ctx *Context) error {
 		return fmt.Errorf("could not find active event with given server ID")
 	}
 
-	embed := &sgo.MessageEmbed{}
-	embed.Title = "🎅 Secret Santa Event"
+	title := "🎅 Secret Santa Event"
 	dsc := "**Welcome to %s's Secret Santa event from the %s server!**"
 	dsc += "\nYour giftee is %s! They may send you a message soon **here** to give you an idea of what they might like as a gift."
-	dsc += "\n\nYou should do the same for YOUR Secret Santa. To write a message to your Santa (be sure not to give yourself away!), you can do so in here by prefixing it with '!msg:santa'."
+	dsc += "\n\nYou should do the same for YOUR Secret Santa. To write a message to your Santa (be sure not to give yourself away!), you can do so in here by prefixing it with '!dearsanta'."
 	dsc += "\n\n*Note that your giftee will not be the same person as your Santa.*\n?->Santa->You->Giftee->?"
 	dsc += "\n" + sse.details()
-	send := &sgo.MessageSend{
-		Embeds: []*sgo.MessageEmbed{
-			embed,
-		},
-	}
+	send := makeEmbeddedMessage(title, dsc)
 
 	sendCount := 0
 	for uID, pt := range sse.Participants {

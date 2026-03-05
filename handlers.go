@@ -77,11 +77,13 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 			content = "The Secret Santa event has not started yet!"
 		}
 
-		err = b.sendDM(ctx.Session, &sgo.MessageSend{
-			Content: strings.TrimPrefix(ctx.Message.Content, prefix+command),
-		}, sse.Participants[ctx.Caller.ID].SecretSanta)
+		messageToSanta := fmt.Sprintf("Dear Santa,\n%s\nSincerely, %s", strings.TrimPrefix(ctx.Message.Content, prefix+command), ctx.Caller.Mention())
+		send := makeEmbeddedMessage("**You received a letter from your giftee!**", messageToSanta)
+
+		err = b.sendDM(ctx.Session, send, sse.Participants[ctx.Caller.ID].SecretSanta)
 		if err != nil {
-			fmt.Printf("failed to message a santa on behalf of user: %s\n", ctx.Caller.Username)
+			fmt.Printf("failed to message a santa on behalf of user %s: %s\n", ctx.Caller.Username, err)
+			content = "Sorry, I was unable to send the message to your Secret Santa."
 			return
 		}
 		content = "I've sent your message to your Secret Santa!"

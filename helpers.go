@@ -131,3 +131,15 @@ func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err err
 	}
 	return channel, nil
 }
+
+func makeEmbeddedMessage(title, description string) *sgo.MessageSend {
+	embed := &sgo.MessageEmbed{}
+	embed.Title = title
+	embed.Description = description
+	send := &sgo.MessageSend{
+		Embeds: []*sgo.MessageEmbed{
+			embed,
+		},
+	}
+	return send
+}
