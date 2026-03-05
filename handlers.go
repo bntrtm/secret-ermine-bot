@@ -172,10 +172,29 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
 
 func (b *botStore) handleMsgStatus(ctx *Context) string {
 	var content string
+	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+		sID, err := b.findParticipantEvent(ctx.Caller.ID, "")
+		if err != nil {
+			content = "You are not a participant in any Secret Santa events that I'm managing."
+			return content
+		}
+		sse, ok := b.Events[sID]
+		if !ok {
+			fmt.Printf("could not find event identified by sID '%s'\n", sID)
+			return ""
+		}
+		server, err := getServer(b.session, sID)
+		if err != nil {
+			fmt.Printf("could not get server by id '%s': %s\n", sID, err)
+			return ""
+		}
+		content = fmt.Sprintf("You are a participant in a Secret Santa event from the %s server, organized by %s!", server.Name, sse.Organizer.Mention())
+		return content
+	}
 
 	sse, ok := b.Events[ctx.Server.ID]
 	if !ok {
-		content = fmt.Sprintf("No Secret Santa events are currently active in the %s serer.", ctx.Server.Name)
+		content = fmt.Sprintf("No Secret Santa events are currently active in the %s server.", ctx.Server.Name)
 		content += "\nOne may be initiated with the '!new' command."
 		return content
 	}
