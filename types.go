@@ -89,3 +89,9 @@ func (sse *SecretSantaEvent) printParticipantMapping(b *botStore) {
 
 	fmt.Println(output)
 }
+
+// details returns a multi-line string representing the
+// details for this event
+func (sse *SecretSantaEvent) details() string {
+	return fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Spending Limit: %s", sse.DistributionDate, sse.SpendLimit)
+}

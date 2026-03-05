@@ -124,7 +124,7 @@ func (b *botStore) notifySantas(server *sgo.Server) error {
 	dsc += "\nYour giftee is %s! They may send you a message soon **here** to give you an idea of what they might like as a gift."
 	dsc += "\n\nYou should do the same for YOUR Secret Santa. To write a message to your Santa (be sure not to give yourself away!), you can do so in here by prefixing it with '!msg:santa'."
 	dsc += "\n\n*Note that your giftee will not be the same person as your Santa.*\n?->Santa->You->Giftee->?"
-	dsc += "\n\nTo review details about the event, you can use the '!status' command."
+	dsc += "\n" + sse.details()
 	send := &sgo.MessageSend{
 		Embeds: []*sgo.MessageEmbed{
 			embed,

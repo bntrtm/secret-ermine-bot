@@ -218,7 +218,7 @@ func (b *botStore) handleMsgStatus(msg *sgo.EventMessage) string {
 		content = fmt.Sprintf("A Secret Santa event organized by %s is active, and awaiting more participants.", sse.Organizer.Mention())
 		content += fmt.Sprintf("\nNew participants may join by reacting to the %s I sent to the '%s' channel!", joinMessageLink, channelName)
 	}
-	content += "\n" + details
+	content += "\n" + sse.details()
 
 	return content
 }
