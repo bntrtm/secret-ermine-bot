@@ -56,7 +56,6 @@ func NewContext(session *sgo.Session, eventMsg *sgo.EventMessage) (*Context, err
 // The prefix used by the command caller is also returned, if valid
 // for the channel.
 func validateCommandMessage(ctx *Context) (prefix, command string, args []string, isValid bool) {
-	isValid = false
 	fields := strings.Split(ctx.Message.Content, " ")
 
 	// command calls to the bot in servers channels must first mention it
@@ -76,16 +75,17 @@ func validateCommandMessage(ctx *Context) (prefix, command string, args []string
 			break
 		}
 	}
-	if prefix == "" {
-		return
-	}
-	isValid = true
 
-	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+	switch prefix {
+	case "":
+		isValid = false
+		return
+	case "!":
 		command, args = strings.TrimPrefix(fields[0], "!"), fields[1:]
-	} else {
+	default:
 		command, args = strings.TrimPrefix(fields[1], "!"), fields[2:]
 	}
+	isValid = true
 
 	return
 }
