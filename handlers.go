@@ -61,32 +61,9 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 	case "cancel":
 		content = b.handleMsgCancel(ctx)
 	case "dearsanta":
-		if ctx.Channel.ChannelType != sgo.ChannelTypeDM {
-			return
-		}
-		sID, err := b.findParticipantEvent(ctx.Caller.ID, "")
-		if err != nil {
-			return
-		}
-
-		sse, ok := b.Events[sID]
-		if !ok {
-			content = "You are not a participant in any Secret Santa events that I'm managing."
-			return
-		} else if !sse.hasStarted() {
-			content = "The Secret Santa event has not started yet!"
-		}
-
-		messageToSanta := fmt.Sprintf("Dear Santa,\n%s\nSincerely, %s", strings.TrimPrefix(ctx.Message.Content, prefix+command), ctx.Caller.Mention())
-		send := makeEmbeddedMessage("**You received a letter from your giftee!**", messageToSanta)
-
-		err = b.sendDM(ctx.Session, send, sse.Participants[ctx.Caller.ID].SecretSanta)
-		if err != nil {
-			fmt.Printf("failed to message a santa on behalf of user %s: %s\n", ctx.Caller.Username, err)
-			content = "Sorry, I was unable to send the message to your Secret Santa."
-			return
-		}
-		content = "I've sent your message to your Secret Santa!"
+		content = b.handleDearParticipant(ctx, Santa, strings.TrimPrefix(ctx.Message.Content, prefix+command))
+	case "deargiftee":
+		content = b.handleDearParticipant(ctx, Giftee, strings.TrimPrefix(ctx.Message.Content, prefix+command))
 	default:
 		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", prefix+command)
 	}
@@ -277,6 +254,64 @@ func (b *botStore) handleMsgCancel(ctx *Context) string {
 	delete(b.Events, ctx.Server.ID)
 	b.cleanTrackedParticipants()
 	return "Canceled existing Secret Santa event."
+}
+
+func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelation, letterContent string) (content string) {
+	if ctx.Channel.ChannelType != sgo.ChannelTypeDM {
+		return
+	}
+	sID, err := b.findParticipantEvent(ctx.Caller.ID, "")
+	if err != nil {
+		return
+	}
+
+	sse, ok := b.Events[sID]
+	if !ok {
+		content = "You are not a participant in any Secret Santa events that I'm managing."
+		return
+	} else if !sse.hasStarted() {
+		content = "The Secret Santa event has not started yet!"
+		return
+	}
+
+	errorMessageContent := fmt.Sprintf("Sorry, I was unable to send the message to your %s.", subject.Title())
+
+	var subjectUID string
+	switch subject {
+	case Santa:
+		subjectUID = sse.Participants[ctx.Caller.ID].SecretSanta
+	case Giftee:
+		subjectUID = sse.Participants[ctx.Caller.ID].Giftee
+	default:
+		content = fmt.Sprintf("Sorry, I was unable to send the message to your %s.", subject.Title())
+		return
+	}
+
+	var messageToSubject string
+	switch subject {
+	case Santa:
+		messageToSubject = fmt.Sprintf("Dear Santa,\n%s\nSincerely, %s", letterContent, ctx.Caller.Mention())
+	case Giftee:
+		subjectUser, err := getUser(ctx.Session, subjectUID)
+		if err != nil {
+			fmt.Printf("could not get %s assigned to caller with username %s: %s\n", subject.Title(), ctx.Caller.Username, err)
+			content = errorMessageContent
+			return
+		}
+
+		messageToSubject = fmt.Sprintf("Dear %s,\n%s\nSincerely, Santa", subjectUser.Mention(), letterContent)
+	}
+
+	send := makeEmbeddedMessage(fmt.Sprintf("**You received a letter from your %s!**", subject.Title()), messageToSubject)
+
+	err = b.sendDM(ctx.Session, send, subjectUID)
+	if err != nil {
+		fmt.Printf("failed to message a santa on behalf of user: %s\n", ctx.Caller.Mention())
+		content = errorMessageContent
+		return
+	}
+	content = fmt.Sprintf("I've sent your message to your %s!", subject.Title())
+	return
 }
 
 func (b *botStore) handleMsgHelp() string {

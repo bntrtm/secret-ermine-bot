@@ -124,6 +124,7 @@ func (b *botStore) notifySantas(ctx *Context) error {
 	dsc := "**Welcome to %s's Secret Santa event from the %s server!**"
 	dsc += "\nYour giftee is %s! They may send you a message soon **here** to give you an idea of what they might like as a gift."
 	dsc += "\n\nYou should do the same for YOUR Secret Santa. To write a message to your Santa (be sure not to give yourself away!), you can do so in here by prefixing it with '!dearsanta'."
+	dsc += "\nAs a Santa, you may also ask for clarifying information from your giftee by messaging them with the '!deargiftee' command."
 	dsc += "\n\n*Note that your giftee will not be the same person as your Santa.*\n?->Santa->You->Giftee->?"
 	dsc += "\n" + sse.details()
 	send := makeEmbeddedMessage(title, dsc)

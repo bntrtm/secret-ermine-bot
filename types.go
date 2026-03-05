@@ -103,3 +103,23 @@ func (sse *SecretSantaEvent) printParticipantMapping(session *sgo.Session) {
 func (sse *SecretSantaEvent) details() string {
 	return fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Spending Limit: %s", sse.DistributionDate, sse.SpendLimit)
 }
+
+type ParticipantRelation int
+
+const (
+	Santa ParticipantRelation = iota
+	Giftee
+)
+
+// Title returns the formatted human-readable relation type
+// for use in output or messages
+func (r *ParticipantRelation) Title() string {
+	switch *r {
+	case Santa:
+		return "Secret Santa"
+	case Giftee:
+		return "giftee"
+	default:
+		return "<UNKNOWN PARTICIPANT RELATION>"
+	}
+}
