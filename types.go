@@ -48,23 +48,21 @@ func (sse *SecretSantaEvent) assignParticipants(uIDs []string) {
 	shuffleStrings(uIDs)
 
 	for i, uID := range uIDs {
-		sse.Participants[uID] = Participant{}
-		if pt, ok := sse.Participants[uID]; ok {
-			gifteeIndex := i + 1
-			// if I'm last, my giftee is the first participant
-			if i == len(uIDs)-1 {
-				gifteeIndex = 0
-			}
-			pt.Giftee = uIDs[gifteeIndex]
-			// assuming they're a participant...
-			if ptGiftee, ok := sse.Participants[pt.Giftee]; ok {
-				// tell the system I'm their Secret Santa...
-				ptGiftee.SecretSanta = uID
-				sse.Participants[pt.Giftee] = ptGiftee
-			}
-			// ...and tell the system I know who my giftee is
-			sse.Participants[uID] = pt
+		// get user as participant (automatic zero value if not in map)
+		pt := sse.Participants[uID]
+		gifteeIndex := i + 1
+		// if I'm last, my giftee is the participant with index 0
+		if i == len(uIDs)-1 {
+			gifteeIndex = 0
 		}
+		pt.Giftee = uIDs[gifteeIndex]
+		// get giftee as participant (automatic zero value if not in map)
+		ptGiftee := sse.Participants[pt.Giftee]
+		// tell the system I'm their Secret Santa...
+		ptGiftee.SecretSanta = uID
+		sse.Participants[pt.Giftee] = ptGiftee
+		// ...and tell the system I know who my giftee is
+		sse.Participants[uID] = pt
 	}
 }
 
