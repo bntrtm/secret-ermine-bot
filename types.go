@@ -97,7 +97,7 @@ func (sse *SecretSantaEvent) printParticipantMapping(b *botStore) {
 		fmt.Fprintf(&output, "\n%s is the Secret Santa of giftee: %s. Their Secret Santa is: %s", participant, giftee, santa)
 	}
 
-	fmt.Println(output)
+	fmt.Println(output.String())
 }
 
 // details returns a multi-line string representing the
