@@ -258,6 +258,10 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 }
 
 func (b *botStore) handleMsgCancel(ctx *Context) string {
+	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+		return "Event organizers may only cancel events from the server in which they were started, through any channel."
+	}
+
 	sse, ok := b.Events[ctx.Server.ID]
 	if !ok {
 		return "No Secret Santa events exist from this server to cancel."
