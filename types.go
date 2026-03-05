@@ -8,6 +8,16 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
+// Context represents a single source of truth
+// retaining all relevant details about a message event.
+type Context struct {
+	Session *sgo.Session
+	Channel *sgo.Channel
+	Server  *sgo.Server
+	Caller  *sgo.User
+	Message *sgo.Message
+}
+
 type Participant struct {
 	SecretSanta string `json:"secret_santa"` // user tasked with getting this participant a gift
 	Giftee      string `json:"giftee"`       // user this participant is tasked with giving a gift to
@@ -68,7 +78,7 @@ func (sse *SecretSantaEvent) assignParticipants(uIDs []string) {
 func (sse *SecretSantaEvent) printParticipantMapping(b *botStore) {
 	getName := func(uID string) string {
 		if b != nil {
-			user, err := b.getUser(uID)
+			user, err := getUser(b.session, uID)
 			if err != nil {
 				return uID
 			}
