@@ -125,6 +125,10 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 // handleMsgNew tells the bot it's time for a new Secret Santa Session!
 // usage: !new <date (YYYY-MM-DD)> <spend_limit>
 func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
+	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+		return "Secret Santa events must be started within a server channel.", false
+	}
+
 	if event, ok := b.Events[ctx.Server.ID]; ok {
 		return fmt.Sprintf("A Secret Santa event organized by %s is already active in this server.\nThey must use the '!cancel' command before setting up a new one.", event.Organizer.Mention()), false
 	}
