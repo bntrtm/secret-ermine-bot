@@ -91,6 +91,10 @@ func (b *botStore) cleanTrackedParticipants() {
 }
 
 func (b *botStore) sendDM(session *sgo.Session, sendMessage *sgo.MessageSend, userID string) error {
+	if userID == "" {
+		return fmt.Errorf("input user ID is empty")
+	}
+
 	dmChannel, err := session.DirectMessageCreate(userID)
 	if err != nil {
 		fmt.Println(err)

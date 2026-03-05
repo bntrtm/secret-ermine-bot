@@ -92,6 +92,9 @@ func validateCommandMessage(ctx *Context) (prefix, command string, args []string
 
 // getUser returns a user by ID, first trying to pull from cache
 func getUser(session *sgo.Session, uID string) (user *sgo.User, err error) {
+	if uID == "" {
+		return nil, fmt.Errorf("input user ID is empty")
+	}
 	user = session.State.User(uID)
 	if user != nil {
 		fmt.Printf("User %s fetched from cache\n", user.Username)
@@ -106,6 +109,9 @@ func getUser(session *sgo.Session, uID string) (user *sgo.User, err error) {
 
 // getServer returns a server by ID, first trying to pull from cache
 func getServer(session *sgo.Session, sID string) (server *sgo.Server, err error) {
+	if sID == "" {
+		return nil, fmt.Errorf("input server ID is empty")
+	}
 	server = session.State.Server(sID)
 	if server != nil {
 		fmt.Printf("Server %s fetched from cache\n", server.Name)
@@ -120,6 +126,9 @@ func getServer(session *sgo.Session, sID string) (server *sgo.Server, err error)
 
 // getChannel returns a channel by ID, first trying to pull from cache
 func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err error) {
+	if cID == "" {
+		return nil, fmt.Errorf("input channel ID is empty")
+	}
 	channel = session.State.Channel(cID)
 	if channel != nil {
 		fmt.Printf("Channel %s fetched from cache\n", channel.Name)
