@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 
 	sgo "github.com/sentinelb51/revoltgo"
 )
@@ -45,6 +46,48 @@ func NewContext(session *sgo.Session, eventMsg *sgo.EventMessage) (*Context, err
 		Caller:  caller,
 		Message: &eventMsg.Message,
 	}, nil
+}
+
+// validateCommandMessage parses a message, checking whether or not
+// the bot ought to recognize it as a command call. The command is
+// returned separated from the prefix, alongside all other space-separated
+// substrings of the message as "args".
+//
+// The prefix used by the command caller is also returned, if valid
+// for the channel.
+func validateCommandMessage(ctx *Context) (prefix, command string, args []string, isValid bool) {
+	isValid = false
+	fields := strings.Split(ctx.Message.Content, " ")
+
+	// command calls to the bot in servers channels must first mention it
+	self := ctx.Session.State.Self()
+	permittedPrefixes := []string{fmt.Sprintf("%s !", self.Mention())}
+
+	// commands for the bot from DM channels need not include the bot mention,
+	// though it is still valid form
+	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+		permittedPrefixes = append(permittedPrefixes, "!")
+	}
+
+	prefix = ""
+	for _, p := range permittedPrefixes {
+		if strings.HasPrefix(ctx.Message.Content, p) {
+			prefix = p
+			break
+		}
+	}
+	if prefix == "" {
+		return
+	}
+	isValid = true
+
+	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+		command, args = strings.TrimPrefix(fields[0], "!"), fields[1:]
+	} else {
+		command, args = strings.TrimPrefix(fields[1], "!"), fields[2:]
+	}
+
+	return
 }
 
 // getUser returns a user by ID, first trying to pull from cache

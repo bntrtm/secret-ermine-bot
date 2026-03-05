@@ -73,10 +73,10 @@ func (sse *SecretSantaEvent) assignParticipants(uIDs []string) {
 // If a botStore pointer is provided, user IDs in the
 // output will be converted to their human-readable
 // usernames.
-func (sse *SecretSantaEvent) printParticipantMapping(b *botStore) {
+func (sse *SecretSantaEvent) printParticipantMapping(session *sgo.Session) {
 	getName := func(uID string) string {
-		if b != nil {
-			user, err := getUser(b.session, uID)
+		if session != nil {
+			user, err := getUser(session, uID)
 			if err != nil {
 				return uID
 			}

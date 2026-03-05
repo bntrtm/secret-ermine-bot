@@ -10,8 +10,6 @@ import (
 
 // botStore tracks persistent data related to the bot's activity across one or more servers
 type botStore struct {
-	session *sgo.Session
-
 	Token               string
 	Events              map[string]SecretSantaEvent    // map of servers to secret-santa events (limited to one active SSE/server)
 	TrackedParticipants map[string]map[string]struct{} // map of user IDs to sets of Server IDs; useful in DM correspondence when bot needs to discern what the relevant event is
@@ -92,14 +90,14 @@ func (b *botStore) cleanTrackedParticipants() {
 	}
 }
 
-func (b *botStore) sendDM(sendMessage *sgo.MessageSend, userID string) error {
-	dmChannel, err := b.session.DirectMessageCreate(userID)
+func (b *botStore) sendDM(session *sgo.Session, sendMessage *sgo.MessageSend, userID string) error {
+	dmChannel, err := session.DirectMessageCreate(userID)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	message, err := b.session.ChannelMessageSend(dmChannel.ID, *sendMessage)
+	message, err := session.ChannelMessageSend(dmChannel.ID, *sendMessage)
 	if err != nil {
 		fmt.Println("Error sending message: ", err)
 		return err
@@ -112,8 +110,8 @@ func (b *botStore) sendDM(sendMessage *sgo.MessageSend, userID string) error {
 // notifySantas messages all participants in the event known
 // to the bot identified by the input server ID,
 // letting them each know who their giftees are.
-func (b *botStore) notifySantas(server *sgo.Server) error {
-	sse, ok := b.Events[server.ID]
+func (b *botStore) notifySantas(ctx *Context) error {
+	sse, ok := b.Events[ctx.Server.ID]
 	if !ok {
 		return fmt.Errorf("could not find active event with given server ID")
 	}
@@ -133,13 +131,13 @@ func (b *botStore) notifySantas(server *sgo.Server) error {
 
 	sendCount := 0
 	for uID, pt := range sse.Participants {
-		giftee, err := getUser(b.session, pt.Giftee)
+		giftee, err := getUser(ctx.Session, pt.Giftee)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		send.Embeds[0].Description = fmt.Sprintf(dsc, sse.Organizer.Mention(), server.Name, giftee.Mention())
-		err = b.sendDM(send, uID)
+		send.Embeds[0].Description = fmt.Sprintf(dsc, sse.Organizer.Mention(), ctx.Server.Name, giftee.Mention())
+		err = b.sendDM(ctx.Session, send, uID)
 		if err == nil {
 			sendCount += 1
 			fmt.Printf("Sent notifications to %d/%d Secret Santas.\n", sendCount, len(sse.Participants))

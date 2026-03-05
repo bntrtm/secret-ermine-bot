@@ -10,18 +10,7 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
-func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessage) {
-	// the bot should never react to its own messages
-	if msg.Author == b.session.State.Self().ID {
-		return
-	}
-
-	ctx, err := NewContext(b.session, msg)
-	if err != nil {
-		fmt.Println("Error building context: ", err)
-		return
-	}
-
+func (b *botStore) handlerEventMessage(ctx *Context) {
 	var content string
 	recordJoinMessage := false
 
@@ -34,7 +23,7 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 			Content: content,
 		}
 
-		botMsg, err := b.session.ChannelMessageSend(ctx.Channel.ID, send)
+		botMsg, err := ctx.Session.ChannelMessageSend(ctx.Channel.ID, send)
 		if err != nil {
 			fmt.Println("Error sending message: ", err)
 			return
@@ -42,7 +31,7 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 
 		fmt.Println("Sent message: ", botMsg.Content)
 
-		if recordJoinMessage {
+		if recordJoinMessage && ctx.Channel.ChannelType != sgo.ChannelTypeDM {
 			if entry, ok := b.Events[ctx.Server.ID]; ok {
 				entry.JoinMessageChannelID = botMsg.Channel
 				entry.JoinMessageID = botMsg.ID
@@ -51,31 +40,9 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		}
 	}()
 
-	var command string
-	var args []string
-	fields := strings.Split(ctx.Message.Content, " ")
-
-	// command calls to the bot must first mention it,
-	// unless the channel is a DM channel, where this
-	// is merely optional
-
-	self := b.session.State.Self()
-	expectedPrefix := fmt.Sprintf("%s !", self.Mention())
-
-	if !strings.HasPrefix(ctx.Message.Content, expectedPrefix) {
-		// NO mention... is it worth evaluating whether this is a DM channel?
-		expectedPrefix = "!"
-		if !strings.HasPrefix(ctx.Message.Content, expectedPrefix) {
-			return
-		}
-		// abort if not DM channel; doesn't matter that the prefix
-		// is otherwise valid
-		if ctx.Channel.ChannelType != sgo.ChannelTypeDM {
-			return
-		}
-		command, args = strings.TrimPrefix(fields[0], "!"), fields[1:]
-	} else {
-		command, args = strings.TrimPrefix(fields[1], "!"), fields[2:]
+	prefix, command, args, isValid := validateCommandMessage(ctx)
+	if !isValid {
+		return
 	}
 
 	switch command {
@@ -90,10 +57,10 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 	case "help":
 		content = b.handleMsgHelp()
 	case "ping":
-		content = b.handleMsgPing()
+		content = b.handleMsgPing(ctx)
 	case "cancel":
 		content = b.handleMsgCancel(ctx)
-	case "msg:santa":
+	case "dearsanta":
 		if ctx.Channel.ChannelType != sgo.ChannelTypeDM {
 			return
 		}
@@ -104,13 +71,14 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 
 		sse, ok := b.Events[sID]
 		if !ok {
+			content = "You are not a participant in any Secret Santa events that I'm managing."
 			return
 		} else if !sse.hasStarted() {
 			content = "The Secret Santa event has not started yet!"
 		}
 
-		err = b.sendDM(&sgo.MessageSend{
-			Content: strings.TrimPrefix(ctx.Message.Content, expectedPrefix),
+		err = b.sendDM(ctx.Session, &sgo.MessageSend{
+			Content: strings.TrimPrefix(ctx.Message.Content, prefix+command),
 		}, sse.Participants[ctx.Caller.ID].SecretSanta)
 		if err != nil {
 			fmt.Printf("failed to message a santa on behalf of user: %s\n", ctx.Caller.Username)
@@ -118,7 +86,7 @@ func (b *botStore) handlerEventMessage(session *sgo.Session, msg *sgo.EventMessa
 		}
 		content = "I've sent your message to your Secret Santa!"
 	default:
-		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", fields[0])
+		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", prefix+command)
 	}
 }
 
@@ -154,7 +122,7 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
 		Participants: map[string]Participant{},
 	}
 	newSSE.OrganizationDate = time.Now().String()
-	caller, err := getUser(b.session, ctx.Caller.ID)
+	caller, err := getUser(ctx.Session, ctx.Caller.ID)
 	if err != nil {
 		fmt.Println(err)
 		return "", false
@@ -187,7 +155,7 @@ func (b *botStore) handleMsgStatus(ctx *Context) string {
 			fmt.Printf("could not find event identified by sID '%s'\n", sID)
 			return ""
 		}
-		server, err := getServer(b.session, sID)
+		server, err := getServer(ctx.Session, sID)
 		if err != nil {
 			fmt.Printf("could not get server by id '%s': %s\n", sID, err)
 			return ""
@@ -211,7 +179,7 @@ func (b *botStore) handleMsgStatus(ctx *Context) string {
 		}
 	} else {
 		channelName := ""
-		channel, err := getChannel(b.session, sse.JoinMessageChannelID)
+		channel, err := getChannel(ctx.Session, sse.JoinMessageChannelID)
 		if err != nil {
 			channelName = "???"
 		} else {
@@ -240,7 +208,7 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 		return ""
 	}
 
-	joinMessage, err := b.session.ChannelMessage(sse.JoinMessageChannelID, sse.JoinMessageID)
+	joinMessage, err := ctx.Session.ChannelMessage(sse.JoinMessageChannelID, sse.JoinMessageID)
 	if err != nil {
 		return "ERROR: could not find join message to read."
 	}
@@ -268,7 +236,7 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	sse.assignParticipants(recorded)
 
 	// NOTE: this call is for debugging purposes!
-	sse.printParticipantMapping(b)
+	sse.printParticipantMapping(ctx.Session)
 
 	b.Events[ctx.Server.ID] = sse
 	err = b.syncEventParticipants(ctx.Server.ID)
@@ -280,7 +248,7 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	content += fmt.Sprintf("\n%d participants will be notified privately with next steps!", len(b.Events[ctx.Server.ID].Participants))
 
 	go func() {
-		err = b.notifySantas(ctx.Server)
+		err = b.notifySantas(ctx)
 		if err != nil {
 			fmt.Println("notifySantas: %w", err)
 		}
@@ -309,12 +277,12 @@ func (b *botStore) handleMsgHelp() string {
 	return "Available commands:\n-!help\n-!new\n-!start\n-!status\n-!cancel\n-!ping"
 }
 
-func (b *botStore) handleMsgPing() string {
-	latency := b.session.WS.Latency()
+func (b *botStore) handleMsgPing(ctx *Context) string {
+	latency := ctx.Session.WS.Latency()
 
 	if latency.Milliseconds() == 0 {
 		return "Still calculating, keep re-trying this command in 15-second intervals."
 	}
 
-	return b.session.WS.Latency().String()
+	return ctx.Session.WS.Latency().String()
 }
