@@ -111,10 +111,18 @@ const (
 	Giftee
 )
 
+// Opp returns the corresponding value of the participant relation.
+func (r *ParticipantRelation) Opp() ParticipantRelation {
+	if *r == Santa {
+		return Giftee
+	}
+	return Santa
+}
+
 // Title returns the formatted human-readable relation type
 // for use in output or messages
-func (r *ParticipantRelation) Title() string {
-	switch *r {
+func (r ParticipantRelation) Title() string {
+	switch r {
 	case Santa:
 		return "Secret Santa"
 	case Giftee:
