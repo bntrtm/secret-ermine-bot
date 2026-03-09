@@ -40,7 +40,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		}
 	}()
 
-	prefix, command, args, isValid := validateCommandMessage(ctx)
+	prefix, command, args, isValid := validateCommandMessage(ctx, getValidPrefixes(ctx))
 	if !isValid {
 		return
 	}

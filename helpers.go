@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strings"
 
+	// 'sgo' as in "stoat go"
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
@@ -14,6 +15,83 @@ func shuffleStrings(strings []string) {
 		j := rand.Intn(i + 1)
 		strings[i], strings[j] = strings[j], strings[i]
 	}
+}
+
+// getValidPrefixes evaluates prefixes that the bot ought
+// to recognize as valid form in messages before caring
+// to further parse those messages.
+func getValidPrefixes(ctx *Context) []string {
+	// NOTE: this logic was once simply included within the validateCommandMessage function.
+	// After all, the necessary values can be pulled from context there just as well.
+	// It has been separated simply for the sake of making that function testable as a unit.
+
+	// command calls to the bot in servers channels must first mention it
+	prefixes := []string{}
+
+	self := ctx.Session.State.Self()
+	if self != nil {
+		prefixes = append(prefixes, fmt.Sprintf("%s !", self.Mention()))
+	}
+
+	// commands for the bot from DM channels need not include the bot mention,
+	// though it is still valid form
+	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+		prefixes = append(prefixes, "!")
+	}
+
+	return prefixes
+}
+
+// validateCommandMessage parses a message, checking whether or not
+// the bot ought to recognize it as a command call. The command is
+// returned separated from the prefix, alongside all other space-separated
+// substrings of the message as "args".
+//
+// The prefix used by the command caller is also returned, if valid
+// for the channel.
+func validateCommandMessage(ctx *Context, validPrefixes []string) (prefix, command string, args []string, isValid bool) {
+	fields := strings.Split(ctx.Message.Content, " ")
+
+	if len(validPrefixes) == 0 {
+		return
+	}
+
+	prefix = ""
+	for _, p := range validPrefixes {
+		if strings.HasPrefix(ctx.Message.Content, p) {
+			prefix = p
+			break
+		}
+	}
+
+	switch prefix {
+	case "":
+		isValid = false
+		return
+	case "!":
+		command, args = strings.TrimPrefix(fields[0], "!"), fields[1:]
+	default:
+		command, args = strings.TrimPrefix(fields[1], "!"), fields[2:]
+	}
+	isValid = true
+
+	return
+}
+
+// makeEmbeddedMessage produces a message with the given title
+// and description text, colored a soft red.
+func makeEmbeddedMessage(colour, title, description string) *sgo.MessageSend {
+	embed := &sgo.MessageEmbed{}
+	// in the Stoat API, the CSS format honors the regex check
+	embed.Colour = colour
+	embed.Title = title
+	embed.Description = description
+	send := &sgo.MessageSend{
+		Embeds: []*sgo.MessageEmbed{
+			embed,
+		},
+	}
+	return send
 }
 
 func NewContext(session *sgo.Session, eventMsg *sgo.EventMessage) (*Context, error) {
@@ -48,47 +126,9 @@ func NewContext(session *sgo.Session, eventMsg *sgo.EventMessage) (*Context, err
 	}, nil
 }
 
-// validateCommandMessage parses a message, checking whether or not
-// the bot ought to recognize it as a command call. The command is
-// returned separated from the prefix, alongside all other space-separated
-// substrings of the message as "args".
-//
-// The prefix used by the command caller is also returned, if valid
-// for the channel.
-func validateCommandMessage(ctx *Context) (prefix, command string, args []string, isValid bool) {
-	fields := strings.Split(ctx.Message.Content, " ")
-
-	// command calls to the bot in servers channels must first mention it
-	self := ctx.Session.State.Self()
-	permittedPrefixes := []string{fmt.Sprintf("%s !", self.Mention())}
-
-	// commands for the bot from DM channels need not include the bot mention,
-	// though it is still valid form
-	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
-		permittedPrefixes = append(permittedPrefixes, "!")
-	}
-
-	prefix = ""
-	for _, p := range permittedPrefixes {
-		if strings.HasPrefix(ctx.Message.Content, p) {
-			prefix = p
-			break
-		}
-	}
-
-	switch prefix {
-	case "":
-		isValid = false
-		return
-	case "!":
-		command, args = strings.TrimPrefix(fields[0], "!"), fields[1:]
-	default:
-		command, args = strings.TrimPrefix(fields[1], "!"), fields[2:]
-	}
-	isValid = true
-
-	return
-}
+// -----------------
+// 	GETTERS
+// -----------------
 
 // getUser returns a user by ID, first trying to pull from cache
 func getUser(session *sgo.Session, uID string) (user *sgo.User, err error) {
@@ -139,20 +179,4 @@ func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err err
 		return nil, fmt.Errorf("channel with ID %s could not be fetched: %w", cID, err)
 	}
 	return channel, nil
-}
-
-// makeEmbeddedMessage produces a message with the given title
-// and description text, colored a soft red.
-func makeEmbeddedMessage(colour, title, description string) *sgo.MessageSend {
-	embed := &sgo.MessageEmbed{}
-	// in the Stoat API, the CSS format honors the regex check
-	embed.Colour = colour
-	embed.Title = title
-	embed.Description = description
-	send := &sgo.MessageSend{
-		Embeds: []*sgo.MessageEmbed{
-			embed,
-		},
-	}
-	return send
 }
