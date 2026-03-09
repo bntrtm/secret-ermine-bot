@@ -83,9 +83,9 @@ func (b *botStore) cleanTrackedParticipants() {
 			if _, ok := b.Events[sID]; !ok {
 				delete(b.TrackedParticipants[uID], sID)
 			}
-			if len(b.TrackedParticipants[uID]) == 0 {
-				delete(b.TrackedParticipants, uID)
-			}
+		}
+		if len(b.TrackedParticipants[uID]) == 0 {
+			delete(b.TrackedParticipants, uID)
 		}
 	}
 }
