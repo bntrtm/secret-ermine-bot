@@ -123,3 +123,5 @@ func (r *ParticipantRelation) Title() string {
 		return "<UNKNOWN PARTICIPANT RELATION>"
 	}
 }
+
+const ColourSoftRed = "#FF3939"

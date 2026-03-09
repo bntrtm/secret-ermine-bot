@@ -141,8 +141,12 @@ func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err err
 	return channel, nil
 }
 
-func makeEmbeddedMessage(title, description string) *sgo.MessageSend {
+// makeEmbeddedMessage produces a message with the given title
+// and description text, colored a soft red.
+func makeEmbeddedMessage(colour, title, description string) *sgo.MessageSend {
 	embed := &sgo.MessageEmbed{}
+	// in the Stoat API, the CSS format honors the regex check
+	embed.Colour = colour
 	embed.Title = title
 	embed.Description = description
 	send := &sgo.MessageSend{

@@ -302,7 +302,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 		messageToSubject = fmt.Sprintf("Dear %s,\n%s\nSincerely, Santa", subjectUser.Mention(), letterContent)
 	}
 
-	send := makeEmbeddedMessage(fmt.Sprintf("**You received a letter from your %s!**", subject.Title()), messageToSubject)
+	send := makeEmbeddedMessage(ColourSoftRed, fmt.Sprintf("**You received a letter from your %s!**", subject.Title()), messageToSubject)
 
 	err = b.sendDM(ctx.Session, send, subjectUID)
 	if err != nil {

@@ -127,7 +127,7 @@ func (b *botStore) notifySantas(ctx *Context) error {
 	dsc += "\nAs a Santa, you may also ask for clarifying information from your giftee by messaging them with the '!deargiftee' command."
 	dsc += "\n\n*Note that your giftee will not be the same person as your Santa.*\n?->Santa->You->Giftee->?"
 	dsc += "\n" + sse.details()
-	send := makeEmbeddedMessage(title, dsc)
+	send := makeEmbeddedMessage(ColourSoftRed, title, dsc)
 
 	sendCount := 0
 	for uID, pt := range sse.Participants {
