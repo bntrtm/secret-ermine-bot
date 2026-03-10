@@ -48,9 +48,11 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 
 	switch command {
 	case "new":
-		success := false
-		content, success = b.handleMsgNew(args, ctx)
-		recordJoinMessage = success
+		var err error
+		content, err = b.handleMsgNew(args, ctx)
+		if err == nil {
+			recordJoinMessage = true
+		}
 	case "start":
 		content = b.handleMsgStart(ctx)
 	case "status":
@@ -66,26 +68,26 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 	case "deargiftee":
 		content = b.handleDearParticipant(ctx, Giftee, strings.TrimPrefix(ctx.Message.Content, prefix+command))
 	default:
-		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", "!"+command)
+		content = fmt.Sprintf("Unknown command '%s', use *!help* for all available commands.", "!"+command)
 	}
 }
 
 // handleMsgNew tells the bot it's time for a new Secret Santa Session!
 // usage: !new <date (YYYY-MM-DD)> <spend_limit>
-func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
+func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
-		return "Secret Santa events must be started within a server channel.", false
+		return "Secret Santa events must be started within a server channel.", fmt.Errorf("event must be started outside of direct message channel")
 	}
 
 	if event, ok := b.Events[ctx.Server.ID]; ok {
-		return fmt.Sprintf("A Secret Santa event organized by %s is already active in this server.\nThey must use the '!cancel' command before setting up a new one.", event.Organizer.Mention()), false
+		return fmt.Sprintf("A Secret Santa event organized by %s is already active in this server.\nThey must use the '!cancel' command before setting up a new one.", event.Organizer.Mention()), fmt.Errorf("event for this server already active")
 	}
 
 	var content string
 
 	if len(args) != 2 {
-		content = fmt.Sprintf("Argument mismatch; expected 2, but got %d", len(args))
-		return content, false
+		content = "Missing one or more arguments. Use the *!help* command for further information."
+		return content, fmt.Errorf("argument mismatch; expected 2, but got %d", len(args))
 	}
 
 	dateInput := args[0]
@@ -95,7 +97,7 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
 	if err != nil {
 		fmt.Println("Could not parse distribution date provided as time.Time")
 		content = fmt.Sprintf("Bad date input '%s'. Please use the format: YYYY-MM-DD", dateInput)
-		return content, false
+		return content, err
 	}
 
 	newSSE := &SecretSantaEvent{
@@ -104,8 +106,7 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
 	newSSE.OrganizationDate = time.Now().String()
 	caller, err := getUser(ctx.Session, ctx.Caller.ID)
 	if err != nil {
-		fmt.Println(err)
-		return "", false
+		return "", err
 	}
 	newSSE.Organizer = caller
 	newSSE.DistributionDate = distributionDate.Format("2006-01-02")
@@ -119,7 +120,7 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
 
 	b.Events[ctx.Server.ID] = *newSSE
 
-	return content, true
+	return content, nil
 }
 
 // TODO: implement a way for users to specify WHICH secret santa event
