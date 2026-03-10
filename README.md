@@ -1,4 +1,4 @@
-# Secret Ermine Bot
+# Secret Ermine Bot 🎄
 
 ## About
 The Secret Ermine bot for [Stoat](https://stoat.chat) provides users with a Secret Santa service used to manage gift exchanges between users.
