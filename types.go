@@ -31,10 +31,7 @@ type SecretSantaEvent struct {
 	Participants         map[string]Participant `json:"participants"`            // map of user IDs to participant info for all participating in the event
 	JoinMessageID        string                 `json:"join_message_id"`         // id of message participants are expected to react to
 	JoinMessageChannelID string                 `json:"join_message_channel_id"` // channel where the join message can be found
-
-	// Spend limit not enforced with Int parsing and such because currency validation
-	// for something this simple just seems unnecessary
-	SpendLimit string // a user-input string detailing monetary spending limits for the Secret Santa event
+	Notes                string                 `json:"notes"`                   // a user-input string providing further details surrounding the Secret Santa event
 }
 
 func (sse *SecretSantaEvent) hasStarted() bool {
@@ -101,7 +98,7 @@ func (sse *SecretSantaEvent) printParticipantMapping(session *sgo.Session) {
 // details returns a multi-line string representing the
 // details for this event
 func (sse *SecretSantaEvent) details() string {
-	return fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Spending Limit: %s", sse.DistributionDate, sse.SpendLimit)
+	return fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Spending Limit: %s", sse.DistributionDate, sse.Notes)
 }
 
 type ParticipantRelation int

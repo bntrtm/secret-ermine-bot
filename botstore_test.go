@@ -109,7 +109,6 @@ func TestSyncTrackedParticipants(t *testing.T) {
 		Events: map[string]SecretSantaEvent{
 			mockServerID: {
 				Participants: map[string]Participant{},
-				SpendLimit:   "$25",
 			},
 		},
 		TrackedParticipants: map[string]map[string]struct{}{},
@@ -146,7 +145,6 @@ func TestCleanTrackedParticipants(t *testing.T) {
 		Events: map[string]SecretSantaEvent{
 			mockServerID: {
 				Participants: map[string]Participant{},
-				SpendLimit:   "$25",
 			},
 		},
 		TrackedParticipants: map[string]map[string]struct{}{

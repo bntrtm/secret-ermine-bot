@@ -73,7 +73,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 }
 
 // handleMsgNew tells the bot it's time for a new Secret Santa Session!
-// usage: !new <date (YYYY-MM-DD)> <spend_limit>
+// usage: !new <date (YYYY-MM-DD)> <notes>
 func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
 		return "Secret Santa events must be started within a server channel.", fmt.Errorf("event must be started outside of direct message channel")
@@ -85,13 +85,16 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 
 	var content string
 
-	if len(args) != 2 {
+	if len(args) == 0 {
 		content = "Missing one or more arguments. Use the *!help* command for further information."
-		return content, fmt.Errorf("argument mismatch; expected 2, but got %d", len(args))
+		return content, fmt.Errorf("argument mismatch; expected at least 1, but got %d", len(args))
 	}
 
+	notes := []string{}
 	dateInput := args[0]
-	spendLimit := args[1]
+	if len(args) > 1 {
+		notes = args[1:]
+	}
 
 	distributionDate, err := time.Parse("2006-01-02", dateInput)
 	if err != nil {
@@ -114,13 +117,14 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 	}
 	newSSE.Organizer = caller
 	newSSE.DistributionDate = distributionDate.Format("2006-01-02")
-	newSSE.SpendLimit = spendLimit
+	newSSE.Notes = strings.Join(notes, " ")
 
 	content = fmt.Sprintf("%s is organizing a Secret Santa event! It will take place on %s.", newSSE.Organizer.Mention(), newSSE.DistributionDate)
-	content += "\nTo join, react to this message!"
-	content += fmt.Sprintf("\nPlease limit your spending according to: %s", newSSE.SpendLimit)
-	content += fmt.Sprintf("\n%s, you can start the event whenever you're ready with '!start', so long as at least THREE participants have joined.", newSSE.Organizer.Mention())
-	content += "\nOr, the event can be canceled with '!cancel'."
+	content += " **To join, react to this message!**"
+	if newSSE.Notes != "" {
+		content += " Organizer's notes regarding the event:"
+		content += "\n\"" + newSSE.Notes + "\""
+	}
 
 	b.Events[ctx.Server.ID] = *newSSE
 
@@ -349,7 +353,7 @@ func (b *botStore) handleMsgHelp(ctx *Context) string {
 		},
 		{
 			name:                  "new",
-			description:           "Start a new Secret Santa event in this server. Requires two arguments: <Distribution Date (YYYY-MM-DD)> <Spend Limit (any text)>",
+			description:           "Start a new Secret Santa event in this server. Requires two arguments: <Distribution Date *(YYYY-MM-DD)*> <Optional Notes... *(any text)*>",
 			dmChannelsEnabled:     false,
 			serverChannelsEnabled: true,
 		},
