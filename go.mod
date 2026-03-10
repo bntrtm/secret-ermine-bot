@@ -1,4 +1,4 @@
-module github.com/bntrtm/secret-ermine
+module github.com/bntrtm/secret-ermine-bot
 
 go 1.25.0
 

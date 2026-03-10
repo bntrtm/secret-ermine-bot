@@ -27,16 +27,16 @@ Nonetheless, installing and running the bot yourself is always an option, especi
 With Go installed:
 
 ```bash
-go install github.com/bntrtm/secret-ermine
+go install github.com/bntrtm/secret-ermine-bot
 ```
 
-Then run it with `secret-ermine`.
+Then run it with `secret-ermine-bot`.
 
 Alternatively, you can build from source after cloning with `git`:
 
 ```
-git clone github.com/bntrtm/secret-ermine.git
-cd secret-ermine
+git clone github.com/bntrtm/secret-ermine-bot.git
+cd secret-ermine-bot
 go build
 ```
 
@@ -57,7 +57,7 @@ BOT_TOKEN=your-stoat-bot-token-here
 With the environment variable set, you can now run the program!
 
 ```bash
-./secret-ermine
+./secret-ermine-bot
 ```
 
 You should see terminal output indicating an attempt to make a WebSocket connection. You will know that the bot is ready for action when it lets you know that the connection was resolved.
