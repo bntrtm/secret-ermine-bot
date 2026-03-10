@@ -7,6 +7,7 @@ import (
 	"time"
 
 	// 'sgo' as in "stoat go"
+
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
@@ -55,7 +56,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 	case "status":
 		content = b.handleMsgStatus(ctx)
 	case "help":
-		content = b.handleMsgHelp()
+		content = b.handleMsgHelp(ctx)
 	case "ping":
 		content = b.handleMsgPing(ctx)
 	case "cancel":
@@ -328,8 +329,74 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 	return
 }
 
-func (b *botStore) handleMsgHelp() string {
-	return "Available commands:\n-!help\n-!new\n-!start\n-!status\n-!cancel\n-!ping"
+func (b *botStore) handleMsgHelp(ctx *Context) string {
+	commands := []struct {
+		name                  string
+		description           string
+		dmChannelsEnabled     bool
+		serverChannelsEnabled bool
+	}{
+		{
+			name:                  "help",
+			description:           "Get help regarding bot usage.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "new",
+			description:           "Start a new Secret Santa event in this server. Requires two arguments: <Distribution Date (YYYY-MM-DD)> <Spend Limit (any text)>",
+			dmChannelsEnabled:     false,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "start",
+			description:           "Start a Secret Santa event, so long as three unique participants have offered a reaction to the join message.",
+			dmChannelsEnabled:     false,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "status",
+			description:           "See the details of an existing Secret Santa event (or lack thereof) within this server.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "cancel",
+			description:           "Cancel an existing Secret Santa event in this server.",
+			dmChannelsEnabled:     false,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "dearsanta",
+			description:           "Send a letter to your Secret Santa! Just follow it with the message you want to send!",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: false,
+		},
+		{
+			name:                  "deargiftee",
+			description:           "Send a letter to your giftee! Just follow it with the message you want to send!",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: false,
+		},
+		{
+			name:                  "ping",
+			description:           "Check websocket latency with this bot.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+	}
+	helpStr := fmt.Sprintf("To write a command for the bot, use: %s !<command>", ctx.Session.State.Self().Mention())
+	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
+		helpStr += "\nHere in DMs with the bot, the mention is merely optional: !<command>"
+	}
+	helpStr += "\n\n**Available commands:**"
+	for _, cmd := range commands {
+		if (cmd.dmChannelsEnabled && ctx.Channel.ChannelType == sgo.ChannelTypeDM) ||
+			(cmd.serverChannelsEnabled && ctx.Channel.ChannelType != sgo.ChannelTypeDM) {
+			helpStr += "\n*" + cmd.name + ":* " + cmd.description
+		}
+	}
+	return helpStr
 }
 
 func (b *botStore) handleMsgPing(ctx *Context) string {
