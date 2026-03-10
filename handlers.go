@@ -121,13 +121,22 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, bool) {
 	return content, true
 }
 
+// TODO: implement a way for users to specify WHICH secret santa event
+// they wish to refer to when writing a command, WHEN they are in more
+// than one managed by the same bot instance.
+
 func (b *botStore) handleMsgStatus(ctx *Context) string {
 	var content string
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
-		sID, err := b.findParticipantEvent(ctx.Caller.ID, "")
+		sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, "")
 		if err != nil {
-			content = "You are not a participant in any Secret Santa events that I'm managing."
-			return content
+			if matches == 0 {
+				content = "You are not a participant in any Secret Santa events that I'm managing."
+				return content
+			} else if matches > 1 {
+				content = fmt.Sprintf("You were found as a participant in %d Secret Santa events; I don't know which you want a status report on!", matches)
+				return content
+			}
 		}
 		sse, ok := b.Events[sID]
 		if !ok {
@@ -260,9 +269,14 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 	if ctx.Channel.ChannelType != sgo.ChannelTypeDM {
 		return
 	}
-	sID, err := b.findParticipantEvent(ctx.Caller.ID, "")
+	sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, "")
 	if err != nil {
-		return
+		if matches == 0 {
+			return
+		} else if matches > 1 {
+			content = fmt.Sprintf("You were found as a participant in %d Secret Santa events; I don't know which of your %ss you want to write to!", matches, subject.Title())
+			return content
+		}
 	}
 
 	sse, ok := b.Events[sID]

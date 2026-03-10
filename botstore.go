@@ -17,23 +17,17 @@ type botStore struct {
 
 // findParticipantEvent takes a user ID and
 // one or more characters that MAY correspond
-// to a server ID and, if the user is found
-// to be a participant in an event defined by
-// a server ID that matches the prefix,
-// returns the full server ID that the event is
-// defined by.
-// If the user is found to be the participant of
-// only ONE event, and the prefix is empty, the
+// to a server ID and returns a slice of events
+// that the user is a participant of whose
+// server IDs match the given prefix.
+//
+// An empty prefix returns all events that the
+// participant is taking part in.
 // one event will be returned.
-func (b *botStore) findParticipantEvent(uID, sIDPrefix string) (string, error) {
+func (b *botStore) findParticipantEvents(uID, sIDPrefix string) []string {
 	sIDs, ok := b.TrackedParticipants[uID]
 	if !ok {
-		return "", fmt.Errorf("user not found as participant in any event defined by sID prefix %s", sIDPrefix)
-	}
-	if len(sIDs) == 1 && sIDPrefix == "" {
-		for sID := range sIDs {
-			return sID, nil
-		}
+		return []string{}
 	}
 
 	events := []string{}
@@ -42,10 +36,31 @@ func (b *botStore) findParticipantEvent(uID, sIDPrefix string) (string, error) {
 			events = append(events, sID)
 		}
 	}
-	if len(events) == 1 {
-		return events[0], nil
-	} else {
-		return "", fmt.Errorf("user found as participant in %d events defined by sID prefix %s", len(events), sIDPrefix)
+
+	return events
+}
+
+// getParticipantEvent attempts to find an server ID matching
+// an event that the user with the given user ID may be a part of,
+// should the ID match the given prefix.
+//
+// The function returns the server ID, number of matching IDs,
+// and any error upon return. The number of matches can be used to
+// better determine and direct logic following one of either
+// error case (no matches, multiple matches).
+func (b *botStore) getParticipantEvent(uID, sIDPrefix string) (string, int, error) {
+	events := b.findParticipantEvents(uID, sIDPrefix)
+
+	switch len(events) {
+	case 0:
+		if sIDPrefix == "" {
+			return "", 0, fmt.Errorf("user not found as participant in any events")
+		}
+		return "", 0, fmt.Errorf("user not found as participant in any event with sID prefix %s", sIDPrefix)
+	case 1:
+		return events[0], 1, nil
+	default:
+		return "", len(events), fmt.Errorf("user found as participant in %d events identified by sID prefix %s", len(events), sIDPrefix)
 	}
 }
 
