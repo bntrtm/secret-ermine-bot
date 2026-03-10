@@ -99,6 +99,10 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 		content = fmt.Sprintf("Bad date input '%s'. Please use the format: YYYY-MM-DD", dateInput)
 		return content, err
 	}
+	if distributionDate.Before(time.Now()) {
+		content = fmt.Sprintf("Bad date input '%s'. Please set a future date for gift distribution.", dateInput)
+		return content, fmt.Errorf("bad date input; must be future date")
+	}
 
 	newSSE := &SecretSantaEvent{
 		Participants: map[string]Participant{},
