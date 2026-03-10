@@ -65,7 +65,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 	case "deargiftee":
 		content = b.handleDearParticipant(ctx, Giftee, strings.TrimPrefix(ctx.Message.Content, prefix+command))
 	default:
-		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", prefix+command)
+		content = fmt.Sprintf("Unknown command '%s', use '!help' for all available commands.", "!"+command)
 	}
 }
 
