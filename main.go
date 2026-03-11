@@ -43,6 +43,7 @@ func main() {
 		ctx, err := NewContext(s, event)
 		if err != nil {
 			fmt.Println("Error building context: ", err)
+			return
 		}
 
 		// hand context off to handler
