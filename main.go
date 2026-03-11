@@ -23,6 +23,7 @@ func main() {
 		Events:              map[string]SecretSantaEvent{},
 		TrackedParticipants: map[string]map[string]struct{}{},
 		Token:               os.Getenv("BOT_TOKEN"),
+		AboutLinkParsed:     validateURL(BotSourceCodeLink),
 	}
 
 	// start a new sgo session

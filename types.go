@@ -8,6 +8,13 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
+// These constants may be used to points users to a public repository
+// for the source code of this bot.
+const (
+	BotName           = "Secret Ermine"
+	BotSourceCodeLink = "https://github.com/bntrtm/secret-ermine-bot"
+)
+
 // Context represents a single source of truth
 // retaining all relevant details about a message event.
 type Context struct {

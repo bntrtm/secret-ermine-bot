@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net/url"
 	"strings"
 
 	// 'sgo' as in "stoat go"
@@ -179,4 +180,10 @@ func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err err
 		return nil, fmt.Errorf("channel with ID %s could not be fetched: %w", cID, err)
 	}
 	return channel, nil
+}
+
+// validateURL returns whether or not a string successfully parses as a URL.
+func validateURL(urlString string) bool {
+	_, err := url.Parse(urlString)
+	return err == nil
 }

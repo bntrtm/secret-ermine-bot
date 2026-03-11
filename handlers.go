@@ -67,6 +67,14 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		content = b.handleDearParticipant(ctx, Santa, strings.TrimPrefix(ctx.Message.Content, prefix+command))
 	case "deargiftee":
 		content = b.handleDearParticipant(ctx, Giftee, strings.TrimPrefix(ctx.Message.Content, prefix+command))
+	case "about":
+		if BotName == "" {
+			content = ""
+		} else if b.AboutLinkParsed {
+			content = fmt.Sprintf("I'm an instance of the [%s bot](%s)!", BotName, BotSourceCodeLink)
+		} else {
+			content = fmt.Sprintf("I'm an instance of the %s bot!", BotName)
+		}
 	default:
 		content = fmt.Sprintf("Unknown command '%s', use *!help* for all available commands.", "!"+command)
 	}
@@ -390,6 +398,12 @@ func (b *botStore) handleMsgHelp(ctx *Context) string {
 		{
 			name:                  "ping",
 			description:           "Check websocket latency with this bot.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "about",
+			description:           "Get info about this bot instance",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: true,
 		},
