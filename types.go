@@ -105,7 +105,7 @@ func (sse *SecretSantaEvent) printParticipantMapping(session *sgo.Session) {
 // details returns a multi-line string representing the
 // details for this event
 func (sse *SecretSantaEvent) details() string {
-	return fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Spending Limit: %s", sse.DistributionDate, sse.Notes)
+	return fmt.Sprintf("EVENT DETAILS:\n  - Distribution Date: %s\n  - Notes: %s", sse.DistributionDate, sse.Notes)
 }
 
 type ParticipantRelation int
