@@ -28,17 +28,16 @@ type Context struct {
 type Participant struct {
 	SecretSanta string `json:"secret_santa"` // user tasked with getting this participant a gift
 	Giftee      string `json:"giftee"`       // user this participant is tasked with giving a gift to
-	About       string `json:"about"`        // a short message from this participant addressing gift ideas for them
 }
 
 type SecretSantaEvent struct {
-	Organizer            *sgo.User              `json:"organizer"`               // user that started the session
+	Participants         map[string]Participant `json:"participants"`            // map of user IDs to participant info for all participating in the event
 	OrganizationDate     string                 `json:"organization_date"`       // timestring referring to the date & time the session began
 	DistributionDate     string                 `json:"distribution_date"`       // timestring referring to the date & time gifts will be distributed
-	Participants         map[string]Participant `json:"participants"`            // map of user IDs to participant info for all participating in the event
 	JoinMessageID        string                 `json:"join_message_id"`         // id of message participants are expected to react to
 	JoinMessageChannelID string                 `json:"join_message_channel_id"` // channel where the join message can be found
 	Notes                string                 `json:"notes"`                   // a user-input string providing further details surrounding the Secret Santa event
+	Organizer            *sgo.User              `json:"organizer"`               // user that started the session
 }
 
 func (sse *SecretSantaEvent) hasStarted() bool {

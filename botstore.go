@@ -10,9 +10,9 @@ import (
 
 // botStore tracks persistent data related to the bot's activity across one or more servers
 type botStore struct {
-	Token               string
 	Events              map[string]SecretSantaEvent    // map of servers to secret-santa events (limited to one active SSE/server)
 	TrackedParticipants map[string]map[string]struct{} // map of user IDs to sets of Server IDs; useful in DM correspondence when bot needs to discern what the relevant event is
+	Token               string                         // bot token retrieved from environment variable
 	AboutLinkParsed     bool                           // whether the value of BotSourceCodeLink properly parses as a URL
 }
 
