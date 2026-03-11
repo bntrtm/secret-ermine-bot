@@ -408,18 +408,19 @@ func (b *botStore) handleMsgHelp(ctx *Context) string {
 			serverChannelsEnabled: true,
 		},
 	}
-	helpStr := fmt.Sprintf("To write a command for the bot, use: %s !<command>", ctx.Session.State.Self().Mention())
+	var helpStr strings.Builder
+	fmt.Fprintf(&helpStr, "To write a command for the bot, use: %s !<command>", ctx.Session.State.Self().Mention())
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
-		helpStr += "\nHere in DMs with the bot, the mention is merely optional: !<command>"
+		helpStr.WriteString("\nHere in DMs with the bot, the mention is merely optional: !<command>")
 	}
-	helpStr += "\n\n**Available commands:**"
+	helpStr.WriteString("\n\n**Available commands:**")
 	for _, cmd := range commands {
 		if (cmd.dmChannelsEnabled && ctx.Channel.ChannelType == sgo.ChannelTypeDM) ||
 			(cmd.serverChannelsEnabled && ctx.Channel.ChannelType != sgo.ChannelTypeDM) {
-			helpStr += "\n*" + cmd.name + ":* " + cmd.description
+			fmt.Fprintf(&helpStr, "\n*%s:* %s", cmd.name, cmd.description)
 		}
 	}
-	return helpStr
+	return helpStr.String()
 }
 
 func (b *botStore) handleMsgPing(ctx *Context) string {
