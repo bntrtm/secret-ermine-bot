@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/bntrtm/secret-ermine-bot/internal/logging"
 	"github.com/joho/godotenv"
+
 	// 'sgo' as in "stoat go"
 	sgo "github.com/sentinelb51/revoltgo"
 )
@@ -26,11 +28,17 @@ func main() {
 		AboutLinkParsed:     validateURL(BotSourceCodeLink),
 	}
 
+	// structured logging setup
+	bot.logger = &logging.Logger{}
+	bot.logger.Init()
+	defer bot.logger.Quit()
+
 	// start a new sgo session
 	session := sgo.New(bot.Token)
 
 	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventReady) {
 		fmt.Printf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers))
+		bot.logger.Log(fmt.Sprintf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers)))
 	})
 
 	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventMessage) {
@@ -43,6 +51,7 @@ func main() {
 		ctx, err := NewContext(s, event)
 		if err != nil {
 			fmt.Println("Error building context: ", err)
+			bot.logger.Log("error building context: " + err.Error())
 			return
 		}
 

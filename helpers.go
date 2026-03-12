@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	// 'sgo' as in "stoat go"
+
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
@@ -127,6 +128,12 @@ func NewContext(session *sgo.Session, eventMsg *sgo.EventMessage) (*Context, err
 	}, nil
 }
 
+// validateURL returns whether or not a string successfully parses as a URL.
+func validateURL(urlString string) bool {
+	_, err := url.Parse(urlString)
+	return err == nil
+}
+
 // -----------------
 // 	GETTERS
 // -----------------
@@ -138,7 +145,7 @@ func getUser(session *sgo.Session, uID string) (user *sgo.User, err error) {
 	}
 	user = session.State.User(uID)
 	if user != nil {
-		fmt.Printf("User %s fetched from cache\n", user.Username)
+		// slog.Debug(fmt.Sprintf("User %s fetched from cache\n", user.Username))
 		return user, nil
 	}
 	user, err = session.User(uID)
@@ -155,7 +162,7 @@ func getServer(session *sgo.Session, sID string) (server *sgo.Server, err error)
 	}
 	server = session.State.Server(sID)
 	if server != nil {
-		fmt.Printf("Server %s fetched from cache\n", server.Name)
+		// slog.Debug(fmt.Sprintf("Server %s fetched from cache\n", server.Name))
 		return server, nil
 	}
 	server, err = session.Server(sID)
@@ -172,7 +179,7 @@ func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err err
 	}
 	channel = session.State.Channel(cID)
 	if channel != nil {
-		fmt.Printf("Channel %s fetched from cache\n", channel.Name)
+		// slog.Debug(fmt.Sprintf("Channel %s fetched from cache\n", channel.Name))
 		return channel, nil
 	}
 	channel, err = session.Channel(cID)
@@ -180,10 +187,4 @@ func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err err
 		return nil, fmt.Errorf("channel with ID %s could not be fetched: %w", cID, err)
 	}
 	return channel, nil
-}
-
-// validateURL returns whether or not a string successfully parses as a URL.
-func validateURL(urlString string) bool {
-	_, err := url.Parse(urlString)
-	return err == nil
 }

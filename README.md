@@ -13,6 +13,10 @@ I have long attended a TTRPG campaign wherein some friends and I used Discord to
 - Easier command syntax under DM context
   - In server channels: `@BOT-HANDLE !<command>`
   - In bot DMs, mention becomes optional: `!<command>`
+- Structured logs saved under home directory
+  - Saved in JSON format, under: `.local/share/stoat/bots/seb/logs`
+  - event-specific logs separated from bot log output
+  - event logs named and organized under a per-server, per-day scheme
 
 # Installation
 

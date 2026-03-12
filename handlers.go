@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -26,11 +27,11 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 
 		botMsg, err := ctx.Session.ChannelMessageSend(ctx.Channel.ID, send)
 		if err != nil {
-			fmt.Println("Error sending message: ", err)
+			b.logger.ELogError(ctx.Server.ID, fmt.Sprintf("could not send message; %s", err), slog.String("message", send.Content))
 			return
 		}
 
-		fmt.Println("Sent message: ", botMsg.Content)
+		b.logger.ELogInfo(ctx.Server.ID, "sent message to server", slog.String("message", botMsg.Content))
 
 		if recordJoinMessage && ctx.Channel.ChannelType != sgo.ChannelTypeDM {
 			if entry, ok := b.Events[ctx.Server.ID]; ok {
@@ -52,11 +53,17 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		content, err = b.handleMsgNew(args, ctx)
 		if err == nil {
 			recordJoinMessage = true
+		} else {
+			b.logger.ELogError(ctx.Server.ID, err.Error())
 		}
 	case "start":
 		content = b.handleMsgStart(ctx)
 	case "status":
-		content = b.handleMsgStatus(ctx)
+		var err error
+		content, err = b.handleMsgStatus(ctx)
+		if err != nil {
+			b.logger.ELogError(ctx.Server.ID, err.Error())
+		}
 	case "help":
 		content = b.handleMsgHelp(ctx)
 	case "ping":
@@ -106,9 +113,8 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 
 	distributionDate, err := time.Parse("2006-01-02", dateInput)
 	if err != nil {
-		fmt.Println("Could not parse distribution date provided as time.Time")
 		content = fmt.Sprintf("Bad date input '%s'. Please use the format: YYYY-MM-DD", dateInput)
-		return content, err
+		return content, fmt.Errorf("could not parse distribution date provided as time.Time: %w", err)
 	}
 	if distributionDate.Before(time.Now()) {
 		content = fmt.Sprintf("Bad date input '%s'. Please set a future date for gift distribution.", dateInput)
@@ -143,38 +149,36 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 // they wish to refer to when writing a command, WHEN they are in more
 // than one managed by the same bot instance.
 
-func (b *botStore) handleMsgStatus(ctx *Context) string {
+func (b *botStore) handleMsgStatus(ctx *Context) (string, error) {
 	var content string
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
 		sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, "")
 		if err != nil {
 			if matches == 0 {
 				content = "You are not a participant in any Secret Santa events that I'm managing."
-				return content
+				return content, nil
 			} else if matches > 1 {
 				content = fmt.Sprintf("You were found as a participant in %d Secret Santa events; I don't know which you want a status report on!", matches)
-				return content
+				return content, nil
 			}
 		}
 		sse, ok := b.Events[sID]
 		if !ok {
-			fmt.Printf("could not find event identified by sID '%s'\n", sID)
-			return ""
+			return "", fmt.Errorf("could not find event identified by sID '%s'", sID)
 		}
 		server, err := getServer(ctx.Session, sID)
 		if err != nil {
-			fmt.Printf("could not get server by id '%s': %s\n", sID, err)
-			return ""
+			return "", fmt.Errorf("could not get server by id '%s': %w", sID, err)
 		}
 		content = fmt.Sprintf("You are a participant in a Secret Santa event from the %s server, organized by %s!", server.Name, sse.Organizer.Mention())
-		return content
+		return content, nil
 	}
 
 	sse, ok := b.Events[ctx.Server.ID]
 	if !ok {
 		content = fmt.Sprintf("No Secret Santa events are currently active in the %s server.", ctx.Server.Name)
 		content += "\nOne may be initiated with the '!new' command."
-		return content
+		return content, nil
 	}
 
 	if sse.hasStarted() {
@@ -197,7 +201,7 @@ func (b *botStore) handleMsgStatus(ctx *Context) string {
 	}
 	content += "\n" + sse.details()
 
-	return content
+	return content, nil
 }
 
 // handleMsgStart reads all unique reactions on the join message,
@@ -218,16 +222,16 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	if err != nil {
 		return "ERROR: could not find join message to read."
 	}
-	fmt.Println("Found joinMessage: " + joinMessage.Content)
+	b.logger.ELogDebug(ctx.Server.ID, "found join message for event", slog.String("content", joinMessage.Content))
 
 	recorded := []string{}
-	fmt.Printf("There are %d total reactions to evaluate!\n", len(joinMessage.Reactions))
-	for r, uIDs := range joinMessage.Reactions {
-		fmt.Println("Evaluating emoji reaction: " + r)
+	b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("There are %d total reactions to evaluate!\n", len(joinMessage.Reactions)), slog.String("content", joinMessage.Content))
+	for rID, uIDs := range joinMessage.Reactions {
+		b.logger.ELogDebug(ctx.Server.ID, "Evaluating emoji reaction stack with ID: "+rID)
 		for _, uID := range uIDs {
-			fmt.Printf("uID %s reacted with %s...\n", uID, r)
+			b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("user with ID %s reacted with %s...\n", uID, rID))
 			if exists := slices.Contains(recorded, uID); !exists {
-				fmt.Printf("uID %s now being recorded as participant...\n", uID)
+				b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("user with ID %s now being recorded as participant...\n", uID))
 				recorded = append(recorded, uID)
 			}
 		}
@@ -256,7 +260,7 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	go func() {
 		err = b.notifySantas(ctx)
 		if err != nil {
-			fmt.Println("notifySantas: %w", err)
+			b.logger.ELogError(ctx.Server.ID, "notifySantas: "+err.Error())
 		}
 	}()
 
@@ -326,7 +330,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 	case Giftee:
 		subjectUser, err := getUser(ctx.Session, subjectUID)
 		if err != nil {
-			fmt.Printf("could not get %s assigned to caller with username %s: %s\n", subject.Title(), ctx.Caller.Username, err)
+			b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("could not get %s assigned to caller with username %s: %s\n", subject.Title(), ctx.Caller.Username, err))
 			content = errorMessageContent
 			return
 		}
@@ -338,7 +342,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 
 	err = b.sendDM(ctx.Session, send, subjectUID)
 	if err != nil {
-		fmt.Printf("failed to message a santa on behalf of user: %s\n", ctx.Caller.Mention())
+		b.logger.ELogError(ctx.Server.ID, fmt.Sprintf("failed to message a santa on behalf of user: %s\n", ctx.Caller.Mention()))
 		content = errorMessageContent
 		return
 	}
