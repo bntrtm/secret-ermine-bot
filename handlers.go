@@ -27,11 +27,13 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 
 		botMsg, err := ctx.Session.ChannelMessageSend(ctx.Channel.ID, send)
 		if err != nil {
-			b.logger.ELogError(ctx.Server.ID, fmt.Sprintf("could not send message; %s", err), slog.String("message", send.Content))
+			b.TryServerLogError(ctx, fmt.Sprintf("could not send message; %s", err), slog.String("message", send.Content))
 			return
 		}
 
-		b.logger.ELogInfo(ctx.Server.ID, "sent message to server", slog.String("message", botMsg.Content))
+		if ctx.Server != nil {
+			b.TryServerLogInfo(ctx, "sent message to server", slog.String("message", botMsg.Content))
+		}
 
 		if recordJoinMessage && ctx.Channel.ChannelType != sgo.ChannelTypeDM {
 			if entry, ok := b.Events[ctx.Server.ID]; ok {
@@ -54,7 +56,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		if err == nil {
 			recordJoinMessage = true
 		} else {
-			b.logger.ELogError(ctx.Server.ID, err.Error())
+			b.TryServerLogError(ctx, err.Error())
 		}
 	case "start":
 		content = b.handleMsgStart(ctx)
@@ -62,7 +64,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		var err error
 		content, err = b.handleMsgStatus(ctx)
 		if err != nil {
-			b.logger.ELogError(ctx.Server.ID, err.Error())
+			b.TryServerLogError(ctx, err.Error())
 		}
 	case "help":
 		content = b.handleMsgHelp(ctx)
@@ -222,16 +224,16 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	if err != nil {
 		return "ERROR: could not find join message to read."
 	}
-	b.logger.ELogDebug(ctx.Server.ID, "found join message for event", slog.String("content", joinMessage.Content))
+	b.TryServerLogDebug(ctx, "found join message for event", slog.String("content", joinMessage.Content))
 
 	recorded := []string{}
-	b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("There are %d total reactions to evaluate!\n", len(joinMessage.Reactions)), slog.String("content", joinMessage.Content))
+	b.TryServerLogDebug(ctx, fmt.Sprintf("There are %d total reactions to evaluate!\n", len(joinMessage.Reactions)), slog.String("content", joinMessage.Content))
 	for rID, uIDs := range joinMessage.Reactions {
-		b.logger.ELogDebug(ctx.Server.ID, "Evaluating emoji reaction stack with ID: "+rID)
+		b.TryServerLogDebug(ctx, "Evaluating emoji reaction stack with ID: "+rID)
 		for _, uID := range uIDs {
-			b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("user with ID %s reacted with %s...\n", uID, rID))
+			b.TryServerLogDebug(ctx, fmt.Sprintf("user with ID %s reacted with %s...\n", uID, rID))
 			if exists := slices.Contains(recorded, uID); !exists {
-				b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("user with ID %s now being recorded as participant...\n", uID))
+				b.TryServerLogDebug(ctx, fmt.Sprintf("user with ID %s now being recorded as participant...\n", uID))
 				recorded = append(recorded, uID)
 			}
 		}
@@ -260,7 +262,7 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	go func() {
 		err = b.notifySantas(ctx)
 		if err != nil {
-			b.logger.ELogError(ctx.Server.ID, "notifySantas: "+err.Error())
+			b.TryServerLogError(ctx, "notifySantas: "+err.Error())
 		}
 	}()
 
@@ -330,7 +332,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 	case Giftee:
 		subjectUser, err := getUser(ctx.Session, subjectUID)
 		if err != nil {
-			b.logger.ELogDebug(ctx.Server.ID, fmt.Sprintf("could not get %s assigned to caller with username %s: %s\n", subject.Title(), ctx.Caller.Username, err))
+			b.logger.ELogError(sID, fmt.Sprintf("could not get %s assigned to caller with username %s: %s\n", subject.Title(), ctx.Caller.Username, err))
 			content = errorMessageContent
 			return
 		}
@@ -342,7 +344,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 
 	err = b.sendDM(ctx.Session, send, subjectUID)
 	if err != nil {
-		b.logger.ELogError(ctx.Server.ID, fmt.Sprintf("failed to message a santa on behalf of user: %s\n", ctx.Caller.Mention()))
+		b.logger.ELogError(sID, fmt.Sprintf("failed to message a santa on behalf of user: %s\n", ctx.Caller.Mention()))
 		content = errorMessageContent
 		return
 	}

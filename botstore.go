@@ -165,3 +165,38 @@ func (b *botStore) notifySantas(ctx *Context) error {
 
 	return nil
 }
+
+// TryServerLog wraps an event log function to validate context before
+// attempting to log any message pertaining to a server-related event.
+// This is useful for scopes wherein the context may pertain to DM
+// channel rather than a server channel, in which case the logging
+// ought be suppressed.
+func (b *botStore) TryServerLog(logFunc func(sID, msg string, args ...any), ctx *Context, msg string, args ...any) {
+	if ctx == nil {
+		return
+	}
+	if ctx.Server == nil {
+		return
+	}
+	logFunc(ctx.Server.ID, msg, args)
+}
+
+// Convenience wrapper calling TryServerLog with an ELogDebug func.
+func (b *botStore) TryServerLogDebug(ctx *Context, msg string, args ...any) {
+	b.TryServerLog(b.logger.ELogDebug, ctx, msg, args)
+}
+
+// Convenience wrapper calling TryServerLog with an ELogInfo func.
+func (b *botStore) TryServerLogInfo(ctx *Context, msg string, args ...any) {
+	b.TryServerLog(b.logger.ELogInfo, ctx, msg, args)
+}
+
+// Convenience wrapper calling TryServerLog with an ELogWarn func.
+func (b *botStore) TryServerLogWarn(ctx *Context, msg string, args ...any) {
+	b.TryServerLog(b.logger.ELogWarn, ctx, msg, args)
+}
+
+// Convenience wrapper calling TryServerLog with an ELogError func.
+func (b *botStore) TryServerLogError(ctx *Context, msg string, args ...any) {
+	b.TryServerLog(b.logger.ELogError, ctx, msg, args)
+}
