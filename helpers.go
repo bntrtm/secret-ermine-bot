@@ -47,7 +47,7 @@ func getValidPrefixes(ctx *Context) []string {
 // The prefix used by the command caller is also returned, if valid
 // for the channel.
 func validateCommandMessage(ctx *Context, validPrefixes []string) (prefix, command string, args []string, isValid bool) {
-	fields := strings.Split(ctx.Message.Content, " ")
+	fields := strings.Fields(ctx.Message.Content)
 
 	if len(validPrefixes) == 0 {
 		return
@@ -73,6 +73,24 @@ func validateCommandMessage(ctx *Context, validPrefixes []string) (prefix, comma
 	isValid = true
 
 	return
+}
+
+// trimServerIDPrefixArg checks for a first argument that may be present
+// to specify a server ID to the bot, which is required in some DM
+// contexts. If it exists, it is stripped from the input slice of arguments
+// and returned alongside the new modified slice.
+func trimServerIDArg(args []string) (string, []string) {
+	if len(args) == 0 {
+		return "", args
+	}
+	if !strings.HasPrefix(args[0], "--") {
+		return "", args
+	}
+
+	if len(args) == 1 {
+		return strings.TrimLeft(args[0], "-"), []string{}
+	}
+	return strings.TrimLeft(args[0], "-"), args[1:]
 }
 
 // makeEmbeddedMessage produces a message with the given title

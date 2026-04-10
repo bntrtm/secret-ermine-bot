@@ -45,7 +45,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		}
 	}()
 
-	prefix, command, args, isValid := validateCommandMessage(ctx, getValidPrefixes(ctx))
+	_, command, args, isValid := validateCommandMessage(ctx, getValidPrefixes(ctx))
 	if !isValid {
 		return
 	}
@@ -68,7 +68,8 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		content = b.handleMsgStart(ctx)
 	case "status":
 		var err error
-		content, err = b.handleMsgStatus(ctx)
+		sIDPrefix, _ := trimServerIDArg(args)
+		content, err = b.handleMsgStatus(ctx, sIDPrefix)
 		if err != nil {
 			b.TryServerLogError(ctx, err.Error())
 		}
@@ -79,9 +80,11 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 	case "cancel":
 		content = b.handleMsgCancel(ctx)
 	case "dear-santa":
-		content = b.handleDearParticipant(ctx, Santa, strings.TrimPrefix(ctx.Message.Content, prefix+command))
+		sIDPrefix, args := trimServerIDArg(args)
+		content = b.handleDearParticipant(ctx, sIDPrefix, Santa, strings.Join(args, " "))
 	case "dear-giftee":
-		content = b.handleDearParticipant(ctx, Giftee, strings.TrimPrefix(ctx.Message.Content, prefix+command))
+		sIDPrefix, args := trimServerIDArg(args)
+		content = b.handleDearParticipant(ctx, sIDPrefix, Giftee, strings.Join(args, " "))
 	case "about":
 		if BotName == "" {
 			content = ""
@@ -153,21 +156,61 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 	return content, nil
 }
 
-// TODO: implement a way for users to specify WHICH secret santa event
-// they wish to refer to when writing a command, WHEN they are in more
-// than one managed by the same bot instance.
+// makeNotifyTooManyEventsMessage wraps listParticipantEventsMessage
+// create a helpful message informing a user that using a command will
+// expect a serverID prefix be provided to the bot, due to their being
+// a participant in two or more events hosted across different Stoat
+// servers.
+func makeNotifyTooManyEventsMessage(session *sgo.Session, sIDString string, numMatches int) (*sgo.MessageSend, error) {
+	content := fmt.Sprintf("Because you were found as a participant in %d Secret Santa events, I don't know which you want a status report on!", numMatches)
+	content += "\n\nTo let me know which event context to use, use the following command syntax: "
+	content += "\n`!<command> --<server ID prefix>`"
 
-func (b *botStore) handleMsgStatus(ctx *Context) (string, error) {
+	send, err := listParticipantEventsMessage(session, sIDString)
+	if err != nil {
+		return nil, fmt.Errorf("sendNotifyTooManyEventsMessage: %w", err)
+	}
+
+	send.Content = content
+
+	return send, nil
+}
+
+// listParticipantEventsMessage creates an embedded message that lists
+// the Secret Santa events that a user is participating in. It is meant
+// to be called when the `getParticipantEvent` function would return
+// more than one event, using the comma-separated string of server IDs
+// to populate the embedded list.
+func listParticipantEventsMessage(session *sgo.Session, sIDString string) (*sgo.MessageSend, error) {
+	var description strings.Builder
+	description.WriteString("You are a participant in the following events:\n")
+	for sID := range strings.SplitSeq(sIDString, ",") {
+		server, err := getServer(session, sID)
+		if err != nil {
+			return nil, fmt.Errorf("could not populate participant events list: %d", err)
+		}
+		fmt.Fprintf(&description, "\nSERVER EVENT: NAME - %s, ID - %s", server.Name, sID[:6])
+	}
+	message := makeEmbeddedMessage(ColourSoftRed, "Events You're In", description.String())
+
+	return message, nil
+}
+
+func (b *botStore) handleMsgStatus(ctx *Context, sIDPrefix string) (string, error) {
 	var content string
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
-		sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, "")
+		sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, sIDPrefix)
 		if err != nil {
 			if matches == 0 {
 				content = "You are not a participant in any Secret Santa events that I'm managing."
 				return content, nil
 			} else if matches > 1 {
-				content = fmt.Sprintf("You were found as a participant in %d Secret Santa events; I don't know which you want a status report on!", matches)
-				return content, nil
+				send, err := makeNotifyTooManyEventsMessage(ctx.Session, sID, matches)
+				if err != nil {
+					return "", err
+				}
+				_ = b.sendDM(ctx.Session, send, ctx.Caller.ID)
+				return "", nil
 			}
 		}
 		sse, ok := b.Events[sID]
@@ -295,17 +338,22 @@ func (b *botStore) handleMsgCancel(ctx *Context) string {
 	return "Canceled existing Secret Santa event."
 }
 
-func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelation, letterContent string) (content string) {
+func (b *botStore) handleDearParticipant(ctx *Context, sIDPrefix string, subject ParticipantRelation, letterContent string) (content string) {
 	if ctx.Channel.ChannelType != sgo.ChannelTypeDM {
 		return
 	}
-	sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, "")
+	sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, sIDPrefix)
 	if err != nil {
 		if matches == 0 {
-			return
-		} else if matches > 1 {
-			content = fmt.Sprintf("You were found as a participant in %d Secret Santa events; I don't know which of your %ss you want to write to!", matches, subject.Title())
+			content = "You are not a participant in any Secret Santa events that I'm managing."
 			return content
+		} else if matches > 1 {
+			send, err := makeNotifyTooManyEventsMessage(ctx.Session, sID, matches)
+			if err != nil {
+				return
+			}
+			_ = b.sendDM(ctx.Session, send, ctx.Caller.ID)
+			return
 		}
 	}
 
@@ -328,7 +376,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 		subjectUID = sse.Participants[ctx.Caller.ID].Giftee
 	default:
 		content = fmt.Sprintf("Sorry, I was unable to send the message to your %s.", subject.Title())
-		return
+		return content
 	}
 
 	var messageToSubject string
@@ -340,7 +388,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 		if err != nil {
 			b.logger.ELogError(sID, fmt.Sprintf("could not get %s assigned to caller with username %s: %s\n", subject.Title(), ctx.Caller.Username, err))
 			content = errorMessageContent
-			return
+			return content
 		}
 
 		messageToSubject = fmt.Sprintf("Dear %s,\n%s\nSincerely, Santa", subjectUser.Mention(), letterContent)

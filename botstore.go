@@ -130,7 +130,10 @@ func (b *botStore) findParticipantEvents(uID, sIDPrefix string) []string {
 // and any error upon return. The number of matches can be used to
 // better determine and direct logic following one of either
 // error case (no matches, multiple matches).
-func (b *botStore) getParticipantEvent(uID, sIDPrefix string) (string, int, error) {
+//
+// Should the number of matches be > 1, the returned "sID" value is
+// a single string of all relevant events joined together by commas.
+func (b *botStore) getParticipantEvent(uID, sIDPrefix string) (sID string, matches int, err error) {
 	events := b.findParticipantEvents(uID, sIDPrefix)
 
 	switch len(events) {
@@ -142,7 +145,7 @@ func (b *botStore) getParticipantEvent(uID, sIDPrefix string) (string, int, erro
 	case 1:
 		return events[0], 1, nil
 	default:
-		return "", len(events), fmt.Errorf("user found as participant in %d events identified by sID prefix %s", len(events), sIDPrefix)
+		return strings.Join(events, ","), len(events), fmt.Errorf("user found as participant in %d events identified by sID prefix %s", len(events), sIDPrefix)
 	}
 }
 
