@@ -37,8 +37,9 @@ func main() {
 	session := sgo.New(bot.Token)
 
 	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventReady) {
-		fmt.Printf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers))
-		bot.logger.Log(fmt.Sprintf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers)))
+		readyLogMessage := fmt.Sprintf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers))
+		fmt.Print(readyLogMessage)
+		bot.logger.Log(readyLogMessage)
 	})
 
 	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventMessage) {
