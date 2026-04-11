@@ -27,15 +27,10 @@ func getValidPrefixes(ctx *Context) []string {
 	// After all, the necessary values can be pulled from context there just as well.
 	// It has been separated simply for the sake of making that function testable as a unit.
 
-	// command calls to the bot in servers channels must first mention it
-	prefixes := []string{}
+	// command calls to the bot in server channels MUST use the !erm prefix
+	prefixes := []string{"!erm "}
 
-	self := ctx.Session.State.Self()
-	if self != nil {
-		prefixes = append(prefixes, fmt.Sprintf("%s !", self.Mention()))
-	}
-
-	// commands for the bot from DM channels need not include the bot mention,
+	// commands for the bot from DM channels need not include the !erm,
 	// though it is still valid form
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
 		prefixes = append(prefixes, "!")
@@ -73,7 +68,7 @@ func validateCommandMessage(ctx *Context, validPrefixes []string) (prefix, comma
 	case "!":
 		command, args = strings.TrimPrefix(fields[0], "!"), fields[1:]
 	default:
-		command, args = strings.TrimPrefix(fields[1], "!"), fields[2:]
+		command, args = fields[1], fields[2:]
 	}
 	isValid = true
 

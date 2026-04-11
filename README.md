@@ -11,7 +11,7 @@ I have long attended a TTRPG campaign wherein some friends and I used Discord to
 - Manage multiple Secret Santa events per bot instance (one per server)
 - Write anonymized messages to your Secret Santa or Giftee
 - Easier command syntax under DM context
-  - In server channels: `@BOT-HANDLE !<command>`
+  - In server channels: `!erm <command>`
   - In bot DMs, mention becomes optional: `!<command>`
 - Structured logs saved under home directory
   - Saved in JSON format, under: `.local/share/stoat/bots/seb/logs`
@@ -94,15 +94,15 @@ Ensure that the bot has permissions to read, write, and send messages, as well a
 ## Commands
 To command the bot, start a message with one of the following prefixes, dependent on context:
 
-1) `@BOT-HANDLE !<command>`
+1) `!erm <command>`
 2) `!<command>`
 
 The first may be used in either server channels OR direct messages with the bot. The second may  be used only in direct messages with the bot.
 
 To get a list of commands you can run, use the `help` command within a server channel or direct message to the bot:
 
-```
-@BOT-HANDLE !help
+```bash
+!erm help
 ```
 
 The bot will respond with a neat list of commands and instructions for each!
