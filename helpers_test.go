@@ -41,8 +41,7 @@ func TestShuffleStrings(t *testing.T) {
 func TestValidateCommandMessage(t *testing.T) {
 	// mock session's self.ID will be empty, so no userID is included here
 	const mockShortPre = "!"
-	const mockMention = "<@TESTBOT>"
-	const mockMentionPrefix = mockMention + " " + mockShortPre
+	const mockServerPre = "!erm "
 	mockSession := sgo.New("TESTBOT")
 	const expectedCommand = "new"
 
@@ -53,11 +52,11 @@ func TestValidateCommandMessage(t *testing.T) {
 		expectedPrefix string
 	}{
 		{
-			name:        "lack of mention in public channel invalidated",
+			name:        "use of shorthand prefix in public channel invalidates",
 			expectValid: false,
 			input: &Context{
 				Message: &sgo.Message{
-					Content: mockShortPre + "new 2026-12-25 $25",
+					Content: mockShortPre + "new 2026-12-25 $25 limit!",
 				},
 				Channel: &sgo.Channel{
 					ChannelType: sgo.ChannelTypeText,
@@ -66,11 +65,11 @@ func TestValidateCommandMessage(t *testing.T) {
 			},
 		},
 		{
-			name:        "lack of mention in dm channel not invalidated",
+			name:        "use of shorthand prefix in dm channel does not invalidate",
 			expectValid: true,
 			input: &Context{
 				Message: &sgo.Message{
-					Content: mockShortPre + "new 2026-12-25 $25",
+					Content: mockShortPre + "new 2026-12-25 $25 limit!",
 				},
 				Channel: &sgo.Channel{
 					ChannelType: sgo.ChannelTypeDM,
@@ -80,47 +79,61 @@ func TestValidateCommandMessage(t *testing.T) {
 			expectedPrefix: mockShortPre,
 		},
 		{
-			name:        "missing command character invalidates",
-			expectValid: false,
-			input: &Context{
-				Message: &sgo.Message{
-					Content: mockMention + " new 2026-12-25 $25",
-				},
-				Channel: &sgo.Channel{
-					ChannelType: sgo.ChannelTypeText,
-				},
-				Session: mockSession,
-			},
-		},
-		{
-			// mention, command character, and arguments present
-			name:        "good command form validates in public channel",
+			name:        "good command form in public channel validates",
 			expectValid: true,
 			input: &Context{
 				Message: &sgo.Message{
-					Content: mockMentionPrefix + "new 2026-12-25 $25",
+					Content: mockServerPre + "new 2026-12-25 $25 limit!",
 				},
 				Channel: &sgo.Channel{
 					ChannelType: sgo.ChannelTypeText,
 				},
 				Session: mockSession,
 			},
-			expectedPrefix: mockMentionPrefix,
+			expectedPrefix: mockServerPre,
+		},
+		{
+			name:        "good command form in public ch validates despite extra space",
+			expectValid: true,
+			input: &Context{
+				Message: &sgo.Message{
+					Content: mockServerPre + "new  2026-12-25 $25 limit!",
+				},
+				Channel: &sgo.Channel{
+					ChannelType: sgo.ChannelTypeText,
+				},
+				Session: mockSession,
+			},
+			expectedPrefix: mockServerPre,
+		},
+		{
+			name:        "full command form in dm channel validates",
+			expectValid: true,
+			input: &Context{
+				Message: &sgo.Message{
+					Content: mockServerPre + "new 2026-12-25 $25 limit!",
+				},
+				Channel: &sgo.Channel{
+					ChannelType: sgo.ChannelTypeDM,
+				},
+				Session: mockSession,
+			},
+			expectedPrefix: mockServerPre,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prefix, command, _, isValid := validateCommandMessage(tt.input, (append(getValidPrefixes(tt.input), mockMentionPrefix)))
+			prefix, command, _, isValid := validateCommandMessage(tt.input, (append(getValidPrefixes(tt.input), mockServerPre)))
 			if isValid != tt.expectValid {
-				t.Errorf("ERROR: Expected validation status: %t, but got: %t", tt.expectValid, isValid)
+				t.Errorf("expected validation status: %t, but got: %t", tt.expectValid, isValid)
 			}
 			if tt.expectValid {
 				if tt.expectedPrefix != prefix {
-					t.Errorf("ERROR: Expected prefix: %s, but got: %s", tt.expectedPrefix, prefix)
+					t.Errorf("expected prefix: %s, but got: %s", tt.expectedPrefix, prefix)
 				}
 				if expectedCommand != command {
-					t.Errorf("ERROR: Expected command: %s, but got: %s", expectedCommand, command)
+					t.Errorf("expected command: %s, but got: %s", expectedCommand, command)
 				}
 			}
 		})

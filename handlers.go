@@ -416,9 +416,9 @@ func (b *botStore) handleMsgHelp(ctx *Context) string {
 		},
 	}
 	var helpStr strings.Builder
-	fmt.Fprintf(&helpStr, "To write a command for the bot, use: %s !<command>", ctx.Session.State.Self().Mention())
+	helpStr.WriteString("To write a command for the bot, use: !erm <command>")
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
-		helpStr.WriteString("\nHere in DMs with the bot, the mention is merely optional: !<command>")
+		helpStr.WriteString("\nHere in DMs with me, you may use this shorthand: !<command>")
 	}
 	helpStr.WriteString("\n\n**Available commands:**")
 	for _, cmd := range commands {
