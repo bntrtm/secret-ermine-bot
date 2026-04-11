@@ -48,6 +48,7 @@ func main() {
 			Avatar: getBotAvatarURL(),
 		},
 		commands: map[string]command{},
+		platform: os.Getenv("PLATFORM"),
 	}
 	bot.initCommands()
 

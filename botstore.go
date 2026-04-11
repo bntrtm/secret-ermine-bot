@@ -20,7 +20,8 @@ type botStore struct {
 	AboutLinkParsed     bool                           // whether the value of BotSourceCodeLink properly parses as a URL
 	Masquerade          *sgo.MessageMasquerade         // sent with all messages
 	commands            map[string]command             // list of commands that may be run in one or both channel contexts
-	commandKeys         []string
+	commandKeys         []string                       // sorted list of command names
+	platform            string                         // if DEV, dev-only commands are not exposed for use
 }
 
 // initCommands sets the bot's internal command list
@@ -72,17 +73,18 @@ func (b *botStore) initCommands() {
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: false,
 		},
-		"ping": {
-			name:                  "ping",
-			description:           "Check websocket latency with this bot.",
-			dmChannelsEnabled:     true,
-			serverChannelsEnabled: true,
-		},
 		"about": {
 			name:                  "about",
 			description:           "Get info about this bot instance",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: true,
+		},
+		"ping": {
+			name:                  "ping",
+			description:           "Check websocket latency with this bot.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+			devOnly:               true,
 		},
 	}
 
