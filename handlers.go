@@ -360,10 +360,14 @@ func (b *botStore) handleMsgHelp(ctx *Context) string {
 		helpStr.WriteString("\nHere in DMs with me, you may use this shorthand: !<command>")
 	}
 	helpStr.WriteString("\n\n**Available commands:**")
-	for _, cmd := range b.commands {
-		if (cmd.dmChannelsEnabled && ctx.Channel.ChannelType == sgo.ChannelTypeDM) ||
-			(cmd.serverChannelsEnabled && ctx.Channel.ChannelType != sgo.ChannelTypeDM) {
-			fmt.Fprintf(&helpStr, "\n*%s:* %s", cmd.name, cmd.description)
+	for _, cmd := range b.commandKeys {
+		info, ok := b.commands[cmd]
+		if !ok {
+			continue
+		}
+		if (info.dmChannelsEnabled && ctx.Channel.ChannelType == sgo.ChannelTypeDM) ||
+			(info.serverChannelsEnabled && ctx.Channel.ChannelType != sgo.ChannelTypeDM) {
+			fmt.Fprintf(&helpStr, "\n*%s:* %s", info.name, info.description)
 		}
 	}
 	return helpStr.String()

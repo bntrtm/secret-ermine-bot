@@ -47,7 +47,7 @@ func main() {
 			Name:   getBotName(),
 			Avatar: getBotAvatarURL(),
 		},
-		commands: []command{},
+		commands: map[string]command{},
 	}
 	bot.initCommands()
 
