@@ -181,7 +181,7 @@ func (b *botStore) saveEvent(serverID string, event model.SecretSantaEvent) erro
 	return nil
 }
 
-// makeNotifyTooManyEventsMessage wraps listParticipantEventsMessage
+// makeNotifyTooManyEventsMessage wraps listParticipantEventsMessage to
 // create a helpful message informing a user that using a command will
 // expect a serverID prefix be provided to the bot, due to their being
 // a participant in two or more events hosted across different Stoat
