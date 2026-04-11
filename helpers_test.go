@@ -1,11 +1,46 @@
 package main
 
 import (
+	"slices"
 	"testing"
 
 	// 'sgo' as in "stoat go"
 	sgo "github.com/sentinelb51/revoltgo"
 )
+
+func TestTrimServerIDArg(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            []string
+		expectedFirstArg string
+		expectedArgs     []string
+	}{
+		{
+			name:             "pops first arg",
+			input:            []string{"--sIDPrefix", "these", "are", "more", "args"},
+			expectedFirstArg: "sIDPrefix",
+			expectedArgs:     []string{"these", "are", "more", "args"},
+		},
+		{
+			name:             "pops only arg, returns no remaining args",
+			input:            []string{"--sIDPrefix"},
+			expectedFirstArg: "sIDPrefix",
+			expectedArgs:     []string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			first, rest := trimServerIDArg(tc.input)
+			if first != tc.expectedFirstArg {
+				t.Errorf("expected first arg: %s, got: %s", tc.expectedFirstArg, first)
+			}
+			if !slices.Equal(tc.expectedArgs, rest) {
+				t.Errorf("expected remaining args: %v, got: %v", tc.expectedArgs, rest)
+			}
+		})
+	}
+}
 
 func TestValidateCommandMessage(t *testing.T) {
 	// mock session's self.ID will be empty, so no userID is included here
@@ -93,7 +128,7 @@ func TestValidateCommandMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prefix, command, _, isValid := validateCommandMessage(tt.input, (append(getValidPrefixes(tt.input), mockServerPre)))
+			prefix, command, _, isValid := validateCommandMessage(tt.input, append(getValidPrefixes(tt.input), mockServerPre))
 			if isValid != tt.expectValid {
 				t.Errorf("expected validation status: %t, but got: %t", tt.expectValid, isValid)
 			}
