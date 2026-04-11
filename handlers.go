@@ -78,9 +78,9 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		content = b.handleMsgPing(ctx)
 	case "cancel":
 		content = b.handleMsgCancel(ctx)
-	case "dearsanta":
+	case "dear-santa":
 		content = b.handleDearParticipant(ctx, Santa, strings.TrimPrefix(ctx.Message.Content, prefix+command))
-	case "deargiftee":
+	case "dear-giftee":
 		content = b.handleDearParticipant(ctx, Giftee, strings.TrimPrefix(ctx.Message.Content, prefix+command))
 	case "about":
 		if BotName == "" {
