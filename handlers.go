@@ -50,6 +50,11 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		return
 	}
 
+	if cmd, ok := b.commands[command]; ok && cmd.devOnly && b.platform != "DEV" {
+		content = fmt.Sprintf("Invalid command '%s', use *!help* for all available commands.", "!"+command)
+		return
+	}
+
 	switch command {
 	case "new":
 		var err error
@@ -365,6 +370,10 @@ func (b *botStore) handleMsgHelp(ctx *Context) string {
 		if !ok {
 			continue
 		}
+		if info.devOnly && b.platform != "DEV" {
+			continue
+		}
+
 		if (info.dmChannelsEnabled && ctx.Channel.ChannelType == sgo.ChannelTypeDM) ||
 			(info.serverChannelsEnabled && ctx.Channel.ChannelType != sgo.ChannelTypeDM) {
 			fmt.Fprintf(&helpStr, "\n*%s:* %s", info.name, info.description)

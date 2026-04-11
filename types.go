@@ -24,6 +24,7 @@ type command struct {
 	description           string
 	dmChannelsEnabled     bool
 	serverChannelsEnabled bool
+	devOnly               bool
 }
 
 // Context represents a single source of truth

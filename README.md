@@ -120,6 +120,17 @@ A Secret Santa event progresses as follows:
 5) Between the start date and distribution date, users can send anonymized messages to their Secret Santas or giftees, using the bot as a mediator.
 6) When the distribution date comes, gifts are exchanged!
 
+## For Developers
+
+The bot may provide access to commands exclusive to developers by way of the
+`PLATFORM` environment variable. With this variable set, these commands will be
+made available for use. For now, the only of such commands that exists is the 
+`_ping_` command.
+
+```bash
+PLATFORM=DEV
+```
+
 # Contribution
 
 I'm happy to discuss whatever contribution you're interested in exploring for the project!
