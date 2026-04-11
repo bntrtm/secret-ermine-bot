@@ -18,6 +18,7 @@ type botStore struct {
 	Token               string                         // bot token retrieved from environment variable
 	AboutLinkParsed     bool                           // whether the value of BotSourceCodeLink properly parses as a URL
 	Masquerade          *sgo.MessageMasquerade         // sent with all messages
+	commands            []command                      // list of commands that may be run in one or both channel contexts
 }
 
 // findParticipantEvent takes a user ID and
