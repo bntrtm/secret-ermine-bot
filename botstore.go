@@ -61,14 +61,14 @@ func (b *botStore) initCommands() {
 			dmChannelsEnabled:     false,
 			serverChannelsEnabled: true,
 		},
-		"dearsanta": {
-			name:                  "dearsanta",
+		"dear-santa": {
+			name:                  "dear-santa",
 			description:           "Send a letter to your Secret Santa! Just follow it with the message you want to send!",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: false,
 		},
-		"deargiftee": {
-			name:                  "deargiftee",
+		"dear-giftee": {
+			name:                  "dear-giftee",
 			description:           "Send a letter to your giftee! Just follow it with the message you want to send!",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: false,
@@ -221,8 +221,8 @@ func (b *botStore) notifySantas(ctx *Context) error {
 	title := "🎅 Secret Santa Event"
 	dsc := "**Welcome to %s's Secret Santa event from the %s server!**"
 	dsc += "\nYour giftee is %s! They may send you a message soon **here** to give you an idea of what they might like as a gift."
-	dsc += "\n\nYou should do the same for YOUR Secret Santa. To write a message to your Santa (be sure not to give yourself away!), you can do so in here by prefixing it with '!dearsanta'."
-	dsc += "\nAs a Santa, you may also ask for clarifying information from your giftee by messaging them with the '!deargiftee' command."
+	dsc += "\n\nYou should do the same for YOUR Secret Santa. To write a message to your Santa (be sure not to give yourself away!), you can do so in here by prefixing it with '!dear-santa'."
+	dsc += "\nAs a Santa, you may also ask for clarifying information from your giftee by messaging them with the '!dear-giftee' command."
 	dsc += "\n\n*Note that your giftee will not be the same person as your Santa.*\n?->Santa->You->Giftee->?"
 	dsc += "\n" + sse.details()
 	send := makeEmbeddedMessage(ColourSoftRed, title, dsc)
