@@ -70,6 +70,24 @@ To add the bot to a Stoat server, use the `Invite Bot` tool, also found on the w
 
 # Usage
 
+## Masquerade
+Without any other environment variables set, the bot will fall back on some default values for message masquerades. However, some environment variables may be used to customize the appearance of your bot instance when it sends messages.
+
+### MASQ_NAME
+If not set, the masquerade name for the bot will be set to `Secret Ermine` by default.
+```bash
+# this would change the bot's masquerade name
+MASQ_NAME="My Secret Santa Bot"
+```
+
+### MASQ_AVATAR_URL
+If not set, the masquerade avatar for the bot will be set with a link to the official [Secret Ermine Bot Icon](/assets/Secret_Ermine_Bot_Icon.svg) by default. Otherwise, it uses a link set with this environment variable. Alternatively, you may use a value of `DISABLE` to disable the masquerade avatar.
+```bash
+# This would cause the masquerade to fall back on the avatar
+# set for the Stoat bot under your own user-level settings.
+MASQ_AVATAR_URL="DISABLE"
+```
+
 ## Permissions
 Ensure that the bot has permissions to read, write, and send messages, as well as masquerade permissions, so that it can function as expected.
 
