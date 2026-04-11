@@ -1,6 +1,9 @@
 # Attribution
 
-The Secret Ermine bot is made possible thanks in part to the `revoltgo` project, an API wrapper for the Stoat API. It is licensed under the BSD 3-Clause license.
+## Secret Ermine Bot Icon
+
+Commissioned from [Megan Beckel](https://meganbeckel.wordpress.com/).
+Licensed under [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/).
 
 ## github.com/sentinelb51/revoltgo
 
@@ -36,7 +39,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## github.com/joho/godotenv
 
 License Identifier: MIT
-
 
 Copyright (c) 2013 John Barton
 
