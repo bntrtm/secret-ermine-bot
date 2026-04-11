@@ -1,5 +1,7 @@
 # Secret Ermine Bot 🎄
 
+<img src="https://raw.githubusercontent.com/bntrtm/secret-ermine-bot/ef95de7f382b070c56baf8a274e9b55b3098dcd0/assets/Secret_Ermine_Bot_Icon.svg" width="256">
+
 ## About
 The Secret Ermine bot for [Stoat](https://stoat.chat) provides users with a Secret Santa service used to manage gift exchanges between users.
 
