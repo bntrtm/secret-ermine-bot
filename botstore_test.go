@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	// 'sgo' as in "stoat go"
 )
@@ -77,8 +78,8 @@ func TestGetParticipantEvent(t *testing.T) {
 		if matches != 2 {
 			t.Errorf("expected %d results, got %d", 2, matches)
 		}
-		if sID != "" {
-			t.Errorf("expected empty server ID, got %s", sID)
+		if !strings.Contains(sID, ",") {
+			t.Error("expected server ID string returned to contain two comma-separated IDs")
 		}
 	})
 
@@ -91,7 +92,9 @@ func TestGetParticipantEvent(t *testing.T) {
 			t.Errorf("expected %d results, got %d", 1, matches)
 		}
 		if sID == "" {
-			t.Errorf("expected non-empty server ID, got empty")
+			t.Error("expected single server ID in server ID string, got empty")
+		} else if strings.Contains(sID, ",") {
+			t.Error("expected single server ID in server ID string, got two or more comma-separated IDs")
 		}
 	})
 }
