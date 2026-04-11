@@ -51,7 +51,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 	}
 
 	if cmd, ok := b.commands[command]; ok && cmd.devOnly && b.platform != "DEV" {
-		content = fmt.Sprintf("Invalid command '%s', use *!help* for all available commands.", "!"+command)
+		content = fmt.Sprintf("Invalid command '%s', use *!help* for all available commands.", command)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 			content = fmt.Sprintf("I'm an instance of the %s bot!", BotName)
 		}
 	default:
-		content = fmt.Sprintf("Unknown command '%s', use *!help* for all available commands.", "!"+command)
+		content = fmt.Sprintf("Unknown command '%s', use *!help* for all available commands.", command)
 	}
 }
 
