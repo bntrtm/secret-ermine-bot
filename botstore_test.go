@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/bntrtm/secret-ermine-bot/model"
-	// 'sgo' as in "stoat go"
 )
 
 func TestGetParticipantEvent(t *testing.T) {
