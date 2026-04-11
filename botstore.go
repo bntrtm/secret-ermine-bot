@@ -17,6 +17,7 @@ type botStore struct {
 	TrackedParticipants map[string]map[string]struct{} // map of user IDs to sets of Server IDs; useful in DM correspondence when bot needs to discern what the relevant event is
 	Token               string                         // bot token retrieved from environment variable
 	AboutLinkParsed     bool                           // whether the value of BotSourceCodeLink properly parses as a URL
+	Masquerade          *sgo.MessageMasquerade         // sent with all messages
 }
 
 // findParticipantEvent takes a user ID and
@@ -120,6 +121,7 @@ func (b *botStore) sendDM(session *sgo.Session, sendMessage *sgo.MessageSend, us
 		return err
 	}
 
+	sendMessage.Masquerade = b.Masquerade
 	message, err := session.ChannelMessageSend(dmChannel.ID, *sendMessage)
 	if err != nil {
 		fmt.Println("Error sending message: ", err)

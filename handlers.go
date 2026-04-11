@@ -22,7 +22,8 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 			return
 		}
 		send := sgo.MessageSend{
-			Content: content,
+			Content:    content,
+			Masquerade: b.Masquerade,
 		}
 
 		botMsg, err := ctx.Session.ChannelMessageSend(ctx.Channel.ID, send)

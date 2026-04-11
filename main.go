@@ -14,6 +14,22 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
+func getBotName() string {
+	name := os.Getenv("MASQ_NAME")
+	if name == "" {
+		return BotName
+	}
+	return name
+}
+
+func getBotAvatarURL() string {
+	url := os.Getenv("MASQ_AVATAR_URL")
+	if url == "" {
+		return BotAvatarURL
+	}
+	return url
+}
+
 func main() {
 	var err error
 	err = godotenv.Load()
@@ -26,6 +42,10 @@ func main() {
 		TrackedParticipants: map[string]map[string]struct{}{},
 		Token:               os.Getenv("BOT_TOKEN"),
 		AboutLinkParsed:     validateURL(BotSourceCodeLink),
+		Masquerade: &sgo.MessageMasquerade{
+			Name:   getBotName(),
+			Avatar: getBotAvatarURL(),
+		},
 	}
 
 	// structured logging setup
