@@ -21,6 +21,70 @@ type botStore struct {
 	commands            []command                      // list of commands that may be run in one or both channel contexts
 }
 
+// initCommands sets the bot's internal command list
+// to their static values.
+func (b *botStore) initCommands() {
+	if len(b.commands) > 0 {
+		return
+	}
+	b.commands = []command{
+		{
+			name:                  "help",
+			description:           "Get help regarding bot usage.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "new",
+			description:           "Set up a new Secret Santa event in this server. Arguments: <Distribution Date *(YYYY-MM-DD)*> <Optional Notes... *(any text)*>",
+			dmChannelsEnabled:     false,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "start",
+			description:           "Start a Secret Santa event, so long as three unique participants have offered a reaction to the join message.",
+			dmChannelsEnabled:     false,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "status",
+			description:           "See the details of an existing Secret Santa event (or lack thereof) within this server.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "cancel",
+			description:           "Cancel an existing Secret Santa event in this server.",
+			dmChannelsEnabled:     false,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "dearsanta",
+			description:           "Send a letter to your Secret Santa! Just follow it with the message you want to send!",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: false,
+		},
+		{
+			name:                  "deargiftee",
+			description:           "Send a letter to your giftee! Just follow it with the message you want to send!",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: false,
+		},
+		{
+			name:                  "ping",
+			description:           "Check websocket latency with this bot.",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+		{
+			name:                  "about",
+			description:           "Get info about this bot instance",
+			dmChannelsEnabled:     true,
+			serverChannelsEnabled: true,
+		},
+	}
+}
+
 // findParticipantEvent takes a user ID and
 // one or more characters that MAY correspond
 // to a server ID and returns a slice of events
