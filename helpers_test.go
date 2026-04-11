@@ -8,6 +8,40 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
+func TestTrimServerIDArg(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            []string
+		expectedFirstArg string
+		expectedArgs     []string
+	}{
+		{
+			name:             "pops first arg",
+			input:            []string{"--sIDPrefix", "these", "are", "more", "args"},
+			expectedFirstArg: "sIDPrefix",
+			expectedArgs:     []string{"these", "are", "more", "args"},
+		},
+		{
+			name:             "pops only arg, returns no remaining args",
+			input:            []string{"--sIDPrefix"},
+			expectedFirstArg: "sIDPrefix",
+			expectedArgs:     []string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			first, rest := trimServerIDArg(tc.input)
+			if first != tc.expectedFirstArg {
+				t.Errorf("expected first arg: %s, got: %s", tc.expectedFirstArg, first)
+			}
+			if !slices.Equal(tc.expectedArgs, rest) {
+				t.Errorf("expected remaining args: %v, got: %v", tc.expectedArgs, rest)
+			}
+		})
+	}
+}
+
 func TestShuffleStrings(t *testing.T) {
 	tests := []struct {
 		name  string
