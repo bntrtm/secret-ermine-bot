@@ -57,15 +57,15 @@ func TestShuffleStrings(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			inputCopy := []string{}
-			inputCopy = append(inputCopy, tt.input...)
+			inputCopy = append(inputCopy, tc.input...)
 			shuffleStrings(inputCopy)
-			if len(tt.input) != len(inputCopy) {
-				t.Errorf("length of shuffled slice (%d) != input slice (%d)", len(tt.input), len(inputCopy))
+			if len(tc.input) != len(inputCopy) {
+				t.Errorf("length of shuffled slice (%d) != input slice (%d)", len(tc.input), len(inputCopy))
 			}
-			if len(tt.input) != 0 && slices.Equal(tt.input, inputCopy) {
+			if len(tc.input) != 0 && slices.Equal(tc.input, inputCopy) {
 				t.Errorf("slice was not shuffled")
 			}
 		})
@@ -156,15 +156,15 @@ func TestValidateCommandMessage(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			prefix, command, _, isValid := validateCommandMessage(tt.input, (append(getValidPrefixes(tt.input), mockServerPre)))
-			if isValid != tt.expectValid {
-				t.Errorf("expected validation status: %t, but got: %t", tt.expectValid, isValid)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			prefix, command, _, isValid := validateCommandMessage(tc.input, (append(getValidPrefixes(tc.input), mockServerPre)))
+			if isValid != tc.expectValid {
+				t.Errorf("expected validation status: %t, but got: %t", tc.expectValid, isValid)
 			}
-			if tt.expectValid {
-				if tt.expectedPrefix != prefix {
-					t.Errorf("expected prefix: %s, but got: %s", tt.expectedPrefix, prefix)
+			if tc.expectValid {
+				if tc.expectedPrefix != prefix {
+					t.Errorf("expected prefix: %s, but got: %s", tc.expectedPrefix, prefix)
 				}
 				if expectedCommand != command {
 					t.Errorf("expected command: %s, but got: %s", expectedCommand, command)

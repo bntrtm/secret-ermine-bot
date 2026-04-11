@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	// 'sgo' as in "stoat go"
 )
 
 func TestGetParticipantEvent(t *testing.T) {
