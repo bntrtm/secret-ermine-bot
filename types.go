@@ -16,6 +16,16 @@ const (
 	BotSourceCodeLink = "https://github.com/bntrtm/secret-ermine-bot"
 )
 
+// command represents an action that a user may request
+// of the bot. Here, it is simply used in the process of
+// building the help message.
+type command struct {
+	name                  string
+	description           string
+	dmChannelsEnabled     bool
+	serverChannelsEnabled bool
+}
+
 // Context represents a single source of truth
 // retaining all relevant details about a message event.
 type Context struct {

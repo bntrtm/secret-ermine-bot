@@ -354,74 +354,13 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 }
 
 func (b *botStore) handleMsgHelp(ctx *Context) string {
-	commands := []struct {
-		name                  string
-		description           string
-		dmChannelsEnabled     bool
-		serverChannelsEnabled bool
-	}{
-		{
-			name:                  "help",
-			description:           "Get help regarding bot usage.",
-			dmChannelsEnabled:     true,
-			serverChannelsEnabled: true,
-		},
-		{
-			name:                  "new",
-			description:           "Start a new Secret Santa event in this server. Requires two arguments: <Distribution Date *(YYYY-MM-DD)*> <Optional Notes... *(any text)*>",
-			dmChannelsEnabled:     false,
-			serverChannelsEnabled: true,
-		},
-		{
-			name:                  "start",
-			description:           "Start a Secret Santa event, so long as three unique participants have offered a reaction to the join message.",
-			dmChannelsEnabled:     false,
-			serverChannelsEnabled: true,
-		},
-		{
-			name:                  "status",
-			description:           "See the details of an existing Secret Santa event (or lack thereof) within this server.",
-			dmChannelsEnabled:     true,
-			serverChannelsEnabled: true,
-		},
-		{
-			name:                  "cancel",
-			description:           "Cancel an existing Secret Santa event in this server.",
-			dmChannelsEnabled:     false,
-			serverChannelsEnabled: true,
-		},
-		{
-			name:                  "dearsanta",
-			description:           "Send a letter to your Secret Santa! Just follow it with the message you want to send!",
-			dmChannelsEnabled:     true,
-			serverChannelsEnabled: false,
-		},
-		{
-			name:                  "deargiftee",
-			description:           "Send a letter to your giftee! Just follow it with the message you want to send!",
-			dmChannelsEnabled:     true,
-			serverChannelsEnabled: false,
-		},
-		{
-			name:                  "ping",
-			description:           "Check websocket latency with this bot.",
-			dmChannelsEnabled:     true,
-			serverChannelsEnabled: true,
-		},
-		{
-			name:                  "about",
-			description:           "Get info about this bot instance",
-			dmChannelsEnabled:     true,
-			serverChannelsEnabled: true,
-		},
-	}
 	var helpStr strings.Builder
 	helpStr.WriteString("To write a command for the bot, use: !erm <command>")
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
 		helpStr.WriteString("\nHere in DMs with me, you may use this shorthand: !<command>")
 	}
 	helpStr.WriteString("\n\n**Available commands:**")
-	for _, cmd := range commands {
+	for _, cmd := range b.commands {
 		if (cmd.dmChannelsEnabled && ctx.Channel.ChannelType == sgo.ChannelTypeDM) ||
 			(cmd.serverChannelsEnabled && ctx.Channel.ChannelType != sgo.ChannelTypeDM) {
 			fmt.Fprintf(&helpStr, "\n*%s:* %s", cmd.name, cmd.description)
