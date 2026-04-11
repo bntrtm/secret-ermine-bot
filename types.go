@@ -12,7 +12,7 @@ import (
 // for the source code of this bot.
 const (
 	BotName           = "Secret Ermine"
-	BotAvatarURL      = ""
+	BotAvatarURL      = "https://raw.githubusercontent.com/bntrtm/secret-ermine-bot/b923e63c083e97fcaf66e85dcb650eff752e827b/assets/Secret_Ermine_Bot_Icon.svg"
 	BotSourceCodeLink = "https://github.com/bntrtm/secret-ermine-bot"
 )
 
