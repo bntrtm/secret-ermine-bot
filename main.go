@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bntrtm/secret-ermine-bot/internal/logging"
@@ -24,10 +25,10 @@ func getBotName() string {
 
 func getBotAvatarURL() string {
 	url := os.Getenv("MASQ_AVATAR_URL")
-	if url == "" {
-		return BotAvatarURL
+	if strings.ToUpper(url) == "DISABLE" {
+		return ""
 	}
-	return url
+	return BotAvatarURL
 }
 
 func main() {
