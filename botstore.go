@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	// 'sgo' as in "stoat go"
@@ -18,7 +19,8 @@ type botStore struct {
 	Token               string                         // bot token retrieved from environment variable
 	AboutLinkParsed     bool                           // whether the value of BotSourceCodeLink properly parses as a URL
 	Masquerade          *sgo.MessageMasquerade         // sent with all messages
-	commands            []command                      // list of commands that may be run in one or both channel contexts
+	commands            map[string]command             // list of commands that may be run in one or both channel contexts
+	commandKeys         []string
 }
 
 // initCommands sets the bot's internal command list
@@ -27,62 +29,70 @@ func (b *botStore) initCommands() {
 	if len(b.commands) > 0 {
 		return
 	}
-	b.commands = []command{
-		{
+	b.commands = map[string]command{
+		"help": {
 			name:                  "help",
 			description:           "Get help regarding bot usage.",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: true,
 		},
-		{
+		"new": {
 			name:                  "new",
 			description:           "Set up a new Secret Santa event in this server. Arguments: <Distribution Date *(YYYY-MM-DD)*> <Optional Notes... *(any text)*>",
 			dmChannelsEnabled:     false,
 			serverChannelsEnabled: true,
 		},
-		{
+		"start": {
 			name:                  "start",
 			description:           "Start a Secret Santa event, so long as three unique participants have offered a reaction to the join message.",
 			dmChannelsEnabled:     false,
 			serverChannelsEnabled: true,
 		},
-		{
+		"status": {
 			name:                  "status",
 			description:           "See the details of an existing Secret Santa event (or lack thereof) within this server.",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: true,
 		},
-		{
+		"cancel": {
 			name:                  "cancel",
 			description:           "Cancel an existing Secret Santa event in this server.",
 			dmChannelsEnabled:     false,
 			serverChannelsEnabled: true,
 		},
-		{
+		"dearsanta": {
 			name:                  "dearsanta",
 			description:           "Send a letter to your Secret Santa! Just follow it with the message you want to send!",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: false,
 		},
-		{
+		"deargiftee": {
 			name:                  "deargiftee",
 			description:           "Send a letter to your giftee! Just follow it with the message you want to send!",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: false,
 		},
-		{
+		"ping": {
 			name:                  "ping",
 			description:           "Check websocket latency with this bot.",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: true,
 		},
-		{
+		"about": {
 			name:                  "about",
 			description:           "Get info about this bot instance",
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: true,
 		},
 	}
+
+	// get a sorted slice of command keys for later use
+	commandKeys := make([]string, 0, len(b.commands))
+	for k := range b.commands {
+		commandKeys = append(commandKeys, k)
+	}
+	sort.Strings(commandKeys)
+	b.commandKeys = commandKeys
 }
 
 // findParticipantEvent takes a user ID and
