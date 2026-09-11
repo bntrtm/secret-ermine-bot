@@ -203,9 +203,11 @@ func (b *botStore) handleMsgStatus(ctx *Context) (string, error) {
 		} else {
 			channelName = channel.Name
 		}
-		joinMessageLink := fmt.Sprintf("[join message](%s%s)", sgo.BaseURL(), sgo.EndpointChannelMessage(sse.JoinMessageChannelID, sse.JoinMessageID))
+		joinMessageLink := singularizeStoatRoute(fmt.Sprintf("[join message](%s%s%s/%s)", strings.TrimRight(b.baseUrl, "/"), sgo.EndpointServer(ctx.Server.ID), sgo.EndpointChannel(sse.JoinMessageChannelID), sse.JoinMessageID))
 		content = fmt.Sprintf("A Secret Santa event organized by %s is active, and awaiting more participants.", sse.Organizer.Mention())
-		content += fmt.Sprintf("\nNew participants may join by reacting to the %s I sent to the '%s' channel!", joinMessageLink, channelName)
+		content += fmt.Sprintf("\nNew participants may join by reacting to the join message I sent to the '%s' channel!", channelName)
+		// Stoat renders a message link without the hyprlink text.
+		content += fmt.Sprintf("\nJOIN HERE: %s", joinMessageLink)
 	}
 	content += "\n" + sse.details()
 

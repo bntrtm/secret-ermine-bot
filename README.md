@@ -70,6 +70,14 @@ You should see terminal output indicating an attempt to make a WebSocket connect
 
 To add the bot to a Stoat server, use the `Invite Bot` tool, also found on the webpage provided after selecting the bot.
 
+Another (optional) environment also exists to clarify a client base URL to the bot:
+
+```bash
+BASE_URL=https://stoat.chat
+```
+
+The variable is optional, falling back to the public website (`https://stoat.chat`) anyway if unset. However, it may be useful if you happen to self-host a Stoat web client yourself at another address.
+
 # Usage
 
 ## Masquerade
