@@ -31,6 +31,18 @@ func getBotAvatarURL() string {
 	return BotAvatarURL
 }
 
+// getBaseURL returns the value set by the BASE_URL
+// environment variable, or falls back to the public
+// `stoat.chat` base URL.
+func getBaseURL() string {
+	envVal := os.Getenv("BASE_URL")
+	if envVal == "" {
+		return "https://stoat.chat/"
+	} else {
+		return fmt.Sprintf("%s/", strings.TrimRight(envVal, "/"))
+	}
+}
+
 func main() {
 	var err error
 	err = godotenv.Load()
@@ -48,6 +60,7 @@ func main() {
 			Avatar: getBotAvatarURL(),
 		},
 		commands: map[string]command{},
+		baseUrl:  getBaseURL(),
 		platform: os.Getenv("PLATFORM"),
 	}
 	bot.initCommands()

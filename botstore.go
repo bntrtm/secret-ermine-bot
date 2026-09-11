@@ -21,6 +21,7 @@ type botStore struct {
 	Masquerade          *sgo.MessageMasquerade         // sent with all messages
 	commands            map[string]command             // list of commands that may be run in one or both channel contexts
 	commandKeys         []string                       // sorted list of command names
+	baseUrl             string                         // baseUrl of the client server
 	platform            string                         // if DEV, dev-only commands are not exposed for use
 }
 
