@@ -2,22 +2,14 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"net/url"
 	"strings"
 
 	// 'sgo' as in "stoat go"
 
+	"github.com/bntrtm/secret-ermine-bot/model"
 	sgo "github.com/sentinelb51/revoltgo"
 )
-
-// shuffleStrings shuffles a slice of strings in-place.
-func shuffleStrings(strings []string) {
-	for i := range strings {
-		j := rand.Intn(i + 1)
-		strings[i], strings[j] = strings[j], strings[i]
-	}
-}
 
 // getValidPrefixes evaluates prefixes that the bot ought
 // to recognize as valid form in messages before caring
@@ -182,4 +174,19 @@ func getChannel(session *sgo.Session, cID string) (channel *sgo.Channel, err err
 		return nil, fmt.Errorf("channel with ID %s could not be fetched: %w", cID, err)
 	}
 	return channel, nil
+}
+
+// getEventOrganizer pulls the ID from the given event and, given a live session, attempts
+// to provide a pointer to the user that the ID represents.
+func getEventOrganizer(session *sgo.Session, sse model.SecretSantaEvent) (*sgo.User, error) {
+	if session == nil {
+		return nil, fmt.Errorf("session was nil")
+	}
+
+	organizer, err := getUser(session, sse.OrganizerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return organizer, nil
 }

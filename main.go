@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -9,10 +10,14 @@ import (
 	"syscall"
 
 	"github.com/bntrtm/secret-ermine-bot/internal/logging"
+	"github.com/bntrtm/secret-ermine-bot/model"
+	"github.com/bntrtm/secret-ermine-bot/repo"
 	"github.com/joho/godotenv"
 
 	// 'sgo' as in "stoat go"
 	sgo "github.com/sentinelb51/revoltgo"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func getBotName() string {
@@ -50,8 +55,14 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	sebDB, err := sql.Open("sqlite3", "seb.db")
+	if err != nil {
+		log.Fatalf("Failed to open database: %v", err)
+	}
+	defer sebDB.Close()
+
 	bot := &botStore{
-		Events:              map[string]SecretSantaEvent{},
+		Events:              map[string]model.SecretSantaEvent{},
 		TrackedParticipants: map[string]map[string]struct{}{},
 		Token:               os.Getenv("BOT_TOKEN"),
 		AboutLinkParsed:     validateURL(BotSourceCodeLink),
@@ -64,16 +75,20 @@ func main() {
 		platform: os.Getenv("PLATFORM"),
 	}
 	bot.initCommands()
+	if bot.repo, err = repo.New(sebDB); err != nil {
+		panic(err)
+	}
+
+	// start a new sgo session
+	session := sgo.New(bot.Token)
 
 	// structured logging setup
 	bot.logger = &logging.Logger{}
 	bot.logger.Init()
 	defer bot.logger.Quit()
 
-	// start a new sgo session
-	session := sgo.New(bot.Token)
-
 	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventReady) {
+
 		readyLogMessage := fmt.Sprintf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers))
 		fmt.Print(readyLogMessage)
 		bot.logger.Log(readyLogMessage)
@@ -101,6 +116,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	bot.loadEvents()
 
 	// let the bot run by awaiting signals
 	sc := make(chan os.Signal, 1)
