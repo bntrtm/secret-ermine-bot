@@ -41,3 +41,11 @@ ON CONFLICT(server_id) DO UPDATE SET
   notes = EXCLUDED.notes,
   organizer_id = EXCLUDED.organizer_id
 RETURNING *;
+
+-- name: DeleteEventParticipants :exec
+DELETE FROM participants
+WHERE server_id = ?1;
+
+-- name: DeleteEvent :exec
+DELETE FROM events
+WHERE server_id = ?1;

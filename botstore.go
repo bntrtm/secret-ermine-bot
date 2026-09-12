@@ -42,7 +42,6 @@ func (b *botStore) loadEvents() {
 			return
 		}
 	}
-
 }
 
 // initCommands sets the bot's internal command list
