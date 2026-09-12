@@ -9,6 +9,26 @@ import (
 	"context"
 )
 
+const deleteEvent = `-- name: DeleteEvent :exec
+DELETE FROM events
+WHERE server_id = ?1
+`
+
+func (q *Queries) DeleteEvent(ctx context.Context, serverID string) error {
+	_, err := q.db.ExecContext(ctx, deleteEvent, serverID)
+	return err
+}
+
+const deleteEventParticipants = `-- name: DeleteEventParticipants :exec
+DELETE FROM participants
+WHERE server_id = ?1
+`
+
+func (q *Queries) DeleteEventParticipants(ctx context.Context, serverID string) error {
+	_, err := q.db.ExecContext(ctx, deleteEventParticipants, serverID)
+	return err
+}
+
 const getEvents = `-- name: GetEvents :many
 SELECT server_id, organization_date, distribution_date, join_message_id, join_message_channel_id, notes, organizer_id
 FROM events

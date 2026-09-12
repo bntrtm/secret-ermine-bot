@@ -15,7 +15,9 @@ CREATE TABLE participants (
 	secret_santa_id text NOT NULL,
 	giftee_id text NOT NULL,
 
-	PRIMARY KEY (id, server_id)
+	PRIMARY KEY (id, server_id),
+
+	FOREIGN KEY (server_id) REFERENCES events(server_id) ON DELETE CASCADE
 );
 
 -- +goose Down

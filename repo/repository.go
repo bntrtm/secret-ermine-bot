@@ -46,6 +46,9 @@ func (r *Repo) SaveEvent(serverID string, e model.SecretSantaEvent) error {
 	}); err != nil {
 		return err
 	}
+	if err := qtx.DeleteEventParticipants(ctx, serverID); err != nil {
+		return err
+	}
 	for k, v := range e.Participants {
 		if _, err := qtx.UpsertParticipant(ctx, db.UpsertParticipantParams{
 			ID:            k,
@@ -58,6 +61,14 @@ func (r *Repo) SaveEvent(serverID string, e model.SecretSantaEvent) error {
 	}
 
 	return tx.Commit()
+}
+
+func (r *Repo) DeleteEvent(serverID string) error {
+	ctx := context.Background()
+	if err := r.queries.DeleteEvent(ctx, serverID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *Repo) GetEvents() (map[string]model.SecretSantaEvent, error) {

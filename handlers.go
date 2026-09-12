@@ -339,6 +339,15 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	return content
 }
 
+func (b *botStore) cancelEvent(serverID string) error {
+	if err := b.repo.DeleteEvent(serverID); err != nil {
+		return err
+	}
+	delete(b.Events, serverID)
+	b.cleanTrackedParticipants()
+	return nil
+}
+
 func (b *botStore) handleMsgCancel(ctx *Context) string {
 	if ctx.Channel.ChannelType == sgo.ChannelTypeDM {
 		return "Event organizers may only cancel events from the server in which they were started, through any channel."
@@ -354,8 +363,11 @@ func (b *botStore) handleMsgCancel(ctx *Context) string {
 		return ""
 	}
 
-	delete(b.Events, ctx.Server.ID)
-	b.cleanTrackedParticipants()
+	err := b.cancelEvent(ctx.Server.ID)
+	if err != nil {
+		return "Sorry, I couldn't cancel the event. Try again later."
+	}
+
 	return "Canceled existing Secret Santa event."
 }
 
