@@ -7,22 +7,42 @@ import (
 
 	// 'sgo' as in "stoat go"
 	"github.com/bntrtm/secret-ermine-bot/internal/logging"
+	"github.com/bntrtm/secret-ermine-bot/model"
+	"github.com/bntrtm/secret-ermine-bot/repo"
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
 // botStore tracks persistent data related to the bot's activity across one or more servers
 type botStore struct {
 	logger *logging.Logger
+	repo   *repo.Repo
 
-	Events              map[string]SecretSantaEvent    // map of servers to secret-santa events (limited to one active SSE/server)
-	TrackedParticipants map[string]map[string]struct{} // map of user IDs to sets of Server IDs; useful in DM correspondence when bot needs to discern what the relevant event is
-	Token               string                         // bot token retrieved from environment variable
-	AboutLinkParsed     bool                           // whether the value of BotSourceCodeLink properly parses as a URL
-	Masquerade          *sgo.MessageMasquerade         // sent with all messages
-	commands            map[string]command             // list of commands that may be run in one or both channel contexts
-	commandKeys         []string                       // sorted list of command names
-	baseUrl             string                         // baseUrl of the client server
-	platform            string                         // if DEV, dev-only commands are not exposed for use
+	Events              map[string]model.SecretSantaEvent // map of servers to secret-santa events (limited to one active SSE/server)
+	TrackedParticipants map[string]map[string]struct{}    // map of user IDs to sets of Server IDs; useful in DM correspondence when bot needs to discern what the relevant event is
+	Token               string                            // bot token retrieved from environment variable
+	AboutLinkParsed     bool                              // whether the value of BotSourceCodeLink properly parses as a URL
+	Masquerade          *sgo.MessageMasquerade            // sent with all messages
+	commands            map[string]command                // list of commands that may be run in one or both channel contexts
+	commandKeys         []string                          // sorted list of command names
+	baseUrl             string                            // baseUrl of the client server
+	platform            string                            // if DEV, dev-only commands are not exposed for use
+}
+
+func (b *botStore) loadEvents() {
+	var err error
+
+	b.Events, err = b.repo.GetEvents()
+	if err != nil {
+		panic(fmt.Sprintf("could not load events from database: %v", err))
+	}
+
+	for k := range b.Events {
+		if err := b.syncEventParticipants(k); err != nil {
+			b.logger.ELogError(k, "could not sync event participants: %w", err)
+			return
+		}
+	}
+
 }
 
 // initCommands sets the bot's internal command list
@@ -123,7 +143,7 @@ func (b *botStore) findParticipantEvents(uID, sIDPrefix string) []string {
 	return events
 }
 
-// getParticipantEvent attempts to find an server ID matching
+// getParticipantEvent attempts to find a server ID matching
 // an event that the user with the given user ID may be a part of,
 // should the ID match the given prefix.
 //
@@ -153,7 +173,7 @@ func (b *botStore) getParticipantEvent(uID, sIDPrefix string) (string, int, erro
 func (b *botStore) syncEventParticipants(sID string) error {
 	sse, ok := b.Events[sID]
 	if !ok {
-		return fmt.Errorf("trackEventParticipants(sID): no existing event defined by given server ID")
+		return fmt.Errorf("syncEventParticipants(sID): no existing event defined by given server ID")
 	}
 
 	for k := range sse.Participants {
@@ -225,7 +245,7 @@ func (b *botStore) notifySantas(ctx *Context) error {
 	dsc += "\n\nYou should do the same for YOUR Secret Santa. To write a message to your Santa (be sure not to give yourself away!), you can do so in here by prefixing it with '!dear-santa'."
 	dsc += "\nAs a Santa, you may also ask for clarifying information from your giftee by messaging them with the '!dear-giftee' command."
 	dsc += "\n\n*Note that your giftee will not be the same person as your Santa.*\n?->Santa->You->Giftee->?"
-	dsc += "\n" + sse.details()
+	dsc += "\n" + sse.Details()
 	send := makeEmbeddedMessage(ColourSoftRed, title, dsc)
 
 	sendCount := 0
@@ -235,7 +255,16 @@ func (b *botStore) notifySantas(ctx *Context) error {
 			fmt.Println(err)
 			continue
 		}
-		send.Embeds[0].Description = fmt.Sprintf(dsc, sse.Organizer.Mention(), ctx.Server.Name, giftee.Mention())
+		organizerStr := sse.OrganizerID
+		organizer, err := getUser(ctx.Session, sse.OrganizerID)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		} else {
+			organizerStr = organizer.Mention()
+		}
+
+		send.Embeds[0].Description = fmt.Sprintf(dsc, organizerStr, ctx.Server.Name, giftee.Mention())
 		err = b.sendDM(ctx.Session, send, uID)
 		if err == nil {
 			sendCount += 1

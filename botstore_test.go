@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"testing"
+
+	"github.com/bntrtm/secret-ermine-bot/model"
 	// 'sgo' as in "stoat go"
 )
 
@@ -19,15 +21,15 @@ func TestGetParticipantEvent(t *testing.T) {
 	}
 
 	bot := &botStore{
-		Events: map[string]SecretSantaEvent{
+		Events: map[string]model.SecretSantaEvent{
 			mockServerID1: {
-				Participants: map[string]Participant{},
+				Participants: map[string]model.Participant{},
 			},
 			mockServerID2: {
-				Participants: map[string]Participant{},
+				Participants: map[string]model.Participant{},
 			},
 			outlierServerID: {
-				Participants: map[string]Participant{},
+				Participants: map[string]model.Participant{},
 			},
 		},
 		TrackedParticipants: map[string]map[string]struct{}{},
@@ -39,7 +41,7 @@ func TestGetParticipantEvent(t *testing.T) {
 		}
 		// event from mockServerID2 will not include User1
 		// event from outlierServerID will not include User1 nor User2
-		sse.assignParticipants(users[i:])
+		sse.AssignParticipants(users[i:])
 		bot.Events[sID] = sse
 
 		err := bot.syncEventParticipants(sID)
@@ -106,9 +108,9 @@ func TestSyncTrackedParticipants(t *testing.T) {
 	}
 
 	bot := &botStore{
-		Events: map[string]SecretSantaEvent{
+		Events: map[string]model.SecretSantaEvent{
 			mockServerID: {
-				Participants: map[string]Participant{},
+				Participants: map[string]model.Participant{},
 			},
 		},
 		TrackedParticipants: map[string]map[string]struct{}{},
@@ -117,7 +119,7 @@ func TestSyncTrackedParticipants(t *testing.T) {
 	if !ok {
 		t.Errorf("could not get event")
 	}
-	sse.assignParticipants(users)
+	sse.AssignParticipants(users)
 	bot.Events[mockServerID] = sse
 
 	err := bot.syncEventParticipants(mockServerID)
@@ -142,9 +144,9 @@ func TestCleanTrackedParticipants(t *testing.T) {
 	}
 
 	bot := &botStore{
-		Events: map[string]SecretSantaEvent{
+		Events: map[string]model.SecretSantaEvent{
 			mockServerID: {
-				Participants: map[string]Participant{},
+				Participants: map[string]model.Participant{},
 			},
 		},
 		TrackedParticipants: map[string]map[string]struct{}{
@@ -160,7 +162,7 @@ func TestCleanTrackedParticipants(t *testing.T) {
 	if !ok {
 		t.Errorf("could not get event")
 	}
-	sse.assignParticipants(users)
+	sse.AssignParticipants(users)
 	bot.Events[mockServerID] = sse
 
 	err := bot.syncEventParticipants(mockServerID)

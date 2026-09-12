@@ -9,6 +9,7 @@ import (
 
 	// 'sgo' as in "stoat go"
 
+	"github.com/bntrtm/secret-ermine-bot/model"
 	sgo "github.com/sentinelb51/revoltgo"
 )
 
@@ -40,7 +41,7 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 			if entry, ok := b.Events[ctx.Server.ID]; ok {
 				entry.JoinMessageChannelID = botMsg.Channel
 				entry.JoinMessageID = botMsg.ID
-				b.Events[ctx.Server.ID] = entry
+				b.saveEvent(ctx.Server.ID, entry)
 			}
 		}
 	}()
@@ -103,7 +104,12 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 	}
 
 	if event, ok := b.Events[ctx.Server.ID]; ok {
-		return fmt.Sprintf("A Secret Santa event organized by %s is already active in this server.\nThey must use the '!cancel' command before setting up a new one.", event.Organizer.Mention()), fmt.Errorf("event for this server already active")
+		organizer, err := getEventOrganizer(ctx.Session, event)
+		if err != nil {
+			return "A Secret Santa event is already active in this server.\nThe organizer must use the '!cancel' command before setting up a new one.", fmt.Errorf("event for this server already active")
+		}
+
+		return fmt.Sprintf("A Secret Santa event organized by %s is already active in this server.\nThey must use the '!cancel' command before setting up a new one.", organizer.Mention()), fmt.Errorf("event for this server already active")
 	}
 
 	var content string
@@ -129,28 +135,47 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 		return content, fmt.Errorf("bad date input; must be future date")
 	}
 
-	newSSE := &SecretSantaEvent{
-		Participants: map[string]Participant{},
+	newSSE := &model.SecretSantaEvent{
+		Participants: map[string]model.Participant{},
 	}
 	newSSE.OrganizationDate = time.Now().String()
 	caller, err := getUser(ctx.Session, ctx.Caller.ID)
 	if err != nil {
 		return "", err
 	}
-	newSSE.Organizer = caller
+	newSSE.OrganizerID = caller.ID
 	newSSE.DistributionDate = distributionDate.Format("2006-01-02")
 	newSSE.Notes = strings.Join(notes, " ")
 
-	content = fmt.Sprintf("%s is organizing a Secret Santa event! It will take place on %s.", newSSE.Organizer.Mention(), newSSE.DistributionDate)
+	if err := b.saveEvent(ctx.Server.ID, *newSSE); err != nil {
+		content = "I'm sorry, I couldn't get the event started. Try again later."
+		return content, fmt.Errorf("could not save event to database: %w", err)
+	}
+
+	organizer, err := getEventOrganizer(ctx.Session, *newSSE)
+	if err != nil {
+		return "", fmt.Errorf("could not get organizer from event: %v", err)
+	}
+
+	content = fmt.Sprintf("%s is organizing a Secret Santa event! It will take place on %s.", organizer.Mention(), newSSE.DistributionDate)
 	content += " **To join, react to this message!**"
 	if newSSE.Notes != "" {
 		content += " Organizer's notes regarding the event:"
 		content += "\n\"" + newSSE.Notes + "\""
 	}
 
-	b.Events[ctx.Server.ID] = *newSSE
-
 	return content, nil
+}
+
+func (b *botStore) saveEvent(serverID string, event model.SecretSantaEvent) error {
+	err := b.repo.SaveEvent(serverID, event)
+	if err != nil {
+		return fmt.Errorf("could not save event")
+	}
+
+	b.Events[serverID] = event
+
+	return nil
 }
 
 // TODO: implement a way for users to specify WHICH secret santa event
@@ -178,7 +203,13 @@ func (b *botStore) handleMsgStatus(ctx *Context) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("could not get server by id '%s': %w", sID, err)
 		}
-		content = fmt.Sprintf("You are a participant in a Secret Santa event from the %s server, organized by %s!", server.Name, sse.Organizer.Mention())
+
+		organizer, err := getEventOrganizer(ctx.Session, sse)
+		if err != nil {
+			return "", fmt.Errorf("could not get organizer from event: %v", err)
+		}
+
+		content = fmt.Sprintf("You are a participant in a Secret Santa event from the %s server, organized by %s!", server.Name, organizer.Mention())
 		return content, nil
 	}
 
@@ -189,8 +220,13 @@ func (b *botStore) handleMsgStatus(ctx *Context) (string, error) {
 		return content, nil
 	}
 
-	if sse.hasStarted() {
-		content = fmt.Sprintf("The Secret Santa event organized by %s has started, with %d participants!", sse.Organizer.Mention(), len(sse.Participants))
+	organizer, err := getEventOrganizer(ctx.Session, sse)
+	if err != nil {
+		return "", fmt.Errorf("could not get organizer from event: %v", err)
+	}
+
+	if sse.HasStarted() {
+		content = fmt.Sprintf("The Secret Santa event organized by %s has started, with %d participants!", organizer.Mention(), len(sse.Participants))
 		_, ok := sse.Participants[ctx.Caller.ID]
 		if ok {
 			content += fmt.Sprintf("\nYou, %s, are one of them!", ctx.Caller.Mention())
@@ -203,13 +239,19 @@ func (b *botStore) handleMsgStatus(ctx *Context) (string, error) {
 		} else {
 			channelName = channel.Name
 		}
+
+		organizer, err := getEventOrganizer(ctx.Session, sse)
+		if err != nil {
+			return "", fmt.Errorf("could not get organizer from event: %v", err)
+		}
+
 		joinMessageLink := singularizeStoatRoute(fmt.Sprintf("[join message](%s%s%s/%s)", strings.TrimRight(b.baseUrl, "/"), sgo.EndpointServer(ctx.Server.ID), sgo.EndpointChannel(sse.JoinMessageChannelID), sse.JoinMessageID))
-		content = fmt.Sprintf("A Secret Santa event organized by %s is active, and awaiting more participants.", sse.Organizer.Mention())
+		content = fmt.Sprintf("A Secret Santa event organized by %s is active, and awaiting more participants.", organizer.Mention())
 		content += fmt.Sprintf("\nNew participants may join by reacting to the join message I sent to the '%s' channel!", channelName)
 		// Stoat renders a message link without the hyprlink text.
 		content += fmt.Sprintf("\nJOIN HERE: %s", joinMessageLink)
 	}
-	content += "\n" + sse.details()
+	content += "\n" + sse.Details()
 
 	return content, nil
 }
@@ -224,7 +266,7 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	}
 
 	// only the organizer may start the event
-	if ctx.Caller.ID != sse.Organizer.ID {
+	if ctx.Caller.ID != sse.OrganizerID {
 		return ""
 	}
 
@@ -253,10 +295,25 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 		return content
 	}
 
-	sse.assignParticipants(recorded)
+	sse.AssignParticipants(recorded)
 
-	// NOTE: this call is for debugging purposes!
-	sse.printParticipantMapping(ctx.Session)
+	{
+
+		// NOTE: this call is for debugging purposes!
+		getName := func(uID string) string {
+			if ctx.Session != nil {
+				user, err := getUser(ctx.Session, uID)
+				if err != nil {
+					return uID
+				}
+				return user.Username
+			} else {
+				return uID
+			}
+		}
+
+		sse.PrintParticipantMapping(getName)
+	}
 
 	b.Events[ctx.Server.ID] = sse
 	err = b.syncEventParticipants(ctx.Server.ID)
@@ -264,7 +321,12 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 		return "ERROR: could not sync event participants."
 	}
 
-	content := fmt.Sprintf("A Secret Santa event organized by %s has begun!", sse.Organizer.Mention())
+	organizer, err := getEventOrganizer(ctx.Session, sse)
+	if err != nil {
+		return fmt.Sprintf("could not get organizer from event: %v", err)
+	}
+
+	content := fmt.Sprintf("A Secret Santa event organized by %s has begun!", organizer.Mention())
 	content += fmt.Sprintf("\n%d participants will be notified privately with next steps!", len(b.Events[ctx.Server.ID].Participants))
 
 	go func() {
@@ -288,7 +350,7 @@ func (b *botStore) handleMsgCancel(ctx *Context) string {
 	}
 
 	// only the organizer may cancel the event
-	if ctx.Caller.ID != sse.Organizer.ID {
+	if ctx.Caller.ID != sse.OrganizerID {
 		return ""
 	}
 
@@ -315,7 +377,7 @@ func (b *botStore) handleDearParticipant(ctx *Context, subject ParticipantRelati
 	if !ok {
 		content = "You are not a participant in any Secret Santa events that I'm managing."
 		return
-	} else if !sse.hasStarted() {
+	} else if !sse.HasStarted() {
 		content = "The Secret Santa event has not started yet!"
 		return
 	}
