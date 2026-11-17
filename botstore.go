@@ -135,7 +135,7 @@ func (b *botStore) findParticipantEvents(uID, sIDPrefix string) []string {
 
 	events := []string{}
 	for sID := range sIDs {
-		if strings.HasPrefix(sID, sIDPrefix) {
+		if strings.HasPrefix(sID, strings.ToUpper(sIDPrefix)) {
 			events = append(events, sID)
 		}
 	}

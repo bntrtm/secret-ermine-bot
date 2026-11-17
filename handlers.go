@@ -227,7 +227,11 @@ func (b *botStore) handleMsgStatus(ctx *Context, sIDPrefix string) (string, erro
 		sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, sIDPrefix)
 		if err != nil {
 			if matches == 0 {
-				content = "You are not a participant in any Secret Santa events that I'm managing."
+				if sIDPrefix == "" {
+					content = "You are not a participant in any Secret Santa events that I'm managing."
+				} else {
+					content = fmt.Sprintf("You are not a participant in any Secret Santa events known by the prefix '%s'.", sIDPrefix)
+				}
 				return content, nil
 			} else if matches > 1 {
 				send, err := makeNotifyTooManyEventsMessage(ctx.Session, sID, matches)
@@ -422,7 +426,11 @@ func (b *botStore) handleDearParticipant(ctx *Context, sIDPrefix string, subject
 	sID, matches, err := b.getParticipantEvent(ctx.Caller.ID, sIDPrefix)
 	if err != nil {
 		if matches == 0 {
-			content = "You are not a participant in any Secret Santa events that I'm managing."
+			if sIDPrefix == "" {
+				content = "You are not a participant in any Secret Santa events that I'm managing."
+			} else {
+				content = fmt.Sprintf("You are not a participant in any Secret Santa events known by the prefix '%s'.", sIDPrefix)
+			}
 			return content
 		} else if matches > 1 {
 			send, err := makeNotifyTooManyEventsMessage(ctx.Session, sID, matches)
