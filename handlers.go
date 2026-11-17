@@ -189,7 +189,7 @@ func (b *botStore) saveEvent(serverID string, event model.SecretSantaEvent) erro
 func makeNotifyTooManyEventsMessage(session *sgo.Session, sIDString string, numMatches int) (*sgo.MessageSend, error) {
 	content := fmt.Sprintf("Because you were found as a participant in %d Secret Santa events, I don't know which you want a status report on!", numMatches)
 	content += "\n\nTo let me know which event context to use, use the following command syntax: "
-	content += "\n`!<command> --<server ID prefix>`"
+	content += "\n`!erm <command> --<server ID prefix>`"
 
 	send, err := listParticipantEventsMessage(session, sIDString)
 	if err != nil {
