@@ -48,7 +48,7 @@ func (sse *SecretSantaEvent) AssignParticipants(uIDs []string) {
 // EG, for each participant, outputs their giftee and Secret Santa.
 // If a botStore pointer is provided, user IDs in the output will be converted to
 // their human-readable usernames.
-func (sse *SecretSantaEvent) PrintParticipantMapping(getName func(uID string) string) {
+func (sse *SecretSantaEvent) LogParticipantMapping(getName func(uID string) string) string {
 	var output strings.Builder
 	output.WriteString("PARTICIPANT MAPPING:")
 	for uID, p := range sse.Participants {
@@ -58,7 +58,7 @@ func (sse *SecretSantaEvent) PrintParticipantMapping(getName func(uID string) st
 		fmt.Fprintf(&output, "\n%s is the Secret Santa of giftee: %s. Their Secret Santa is: %s", participant, giftee, santa)
 	}
 
-	fmt.Println(output.String())
+	return output.String()
 }
 
 // Details returns a multi-line string representing the details for this event
