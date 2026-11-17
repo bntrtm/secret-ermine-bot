@@ -2,8 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -18,7 +19,31 @@ import (
 	sgo "github.com/sentinelb51/revoltgo"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pressly/goose/v3"
 )
+
+//go:embed sql/schema/*.sql
+var embedMigrations embed.FS
+
+func connectToDB(migrationsDir string) (*sql.DB, error) {
+	sebDB, err := sql.Open("sqlite3", "seb.db")
+	if err != nil {
+		slog.Error("failed to open database", slog.Any("err", err))
+		return nil, err
+	}
+
+	goose.SetBaseFS(embedMigrations)
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		slog.Error("failed to set goose dialect", slog.Any("err", err))
+		return nil, err
+	}
+	if err := goose.Up(sebDB, migrationsDir); err != nil {
+		slog.Error("failed to run migrations", slog.Any("err", err))
+		return nil, err
+	}
+
+	return sebDB, nil
+}
 
 func getBotName() string {
 	name := os.Getenv("MASQ_NAME")
@@ -52,12 +77,12 @@ func main() {
 	var err error
 	err = godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		slog.Warn("could not load .env file", slog.Any("err", err))
 	}
 
-	sebDB, err := sql.Open("sqlite3", "seb.db")
+	sebDB, err := connectToDB("sql/schema")
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		os.Exit(1)
 	}
 	defer sebDB.Close()
 
@@ -88,7 +113,6 @@ func main() {
 	defer bot.logger.Quit()
 
 	sgo.AddHandler(session, func(s *sgo.Session, event *sgo.EventReady) {
-
 		readyLogMessage := fmt.Sprintf("Ready to process commands for %d user(s) across %d server(s)\n", len(event.Users), len(event.Servers))
 		fmt.Print(readyLogMessage)
 		bot.logger.Log(readyLogMessage)

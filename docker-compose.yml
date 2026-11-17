@@ -1,0 +1,35 @@
+name: secret-ermine-bot
+services:
+  bot:
+    build: .
+    image: secret-ermine-bot:latest
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    # environment:
+      # URL Stoat instance can be found at.
+      # BASE_URL: "https://stoat.chat"
+
+      # Set platform to 'DEV' to use exclusive bot commands for development purposes.
+      # PLATFORM: "PROD"
+
+      # Token provided by Stoat instance.
+      # BOT_TOKEN: "bot-token-here"
+
+      # Name to display on bot profile in chat messages.
+      # MASQ_NAME: "Secret Ermine Bot"
+
+      # Image to display on bot profile in chat messages.
+      # MASQ_AVATAR_URL: "DISABLE"
+
+      # Determines what logs are output by the server.
+      # Choices by increasing priority (lower levels suppressed):
+      # DEBUG<INFO<WARN<ERROR.
+      #
+      # SLOG_LEVEL: ERROR
+    volumes:
+      - data:/var/lib/sqlite/data
+
+volumes:
+  data:
