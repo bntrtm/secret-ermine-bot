@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -26,11 +27,14 @@ import (
 var embedMigrations embed.FS
 
 func connectToDB(migrationsDir string) (*sql.DB, error) {
-	dbPath := "data/"
-	if err := os.MkdirAll(dbPath, 0o755); err != nil {
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/seb.db"
+	}
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, err
 	}
-	sebDB, err := sql.Open("sqlite3", dbPath+"seb.db")
+	sebDB, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		slog.Error("failed to open database", slog.Any("err", err))
 		return nil, err
