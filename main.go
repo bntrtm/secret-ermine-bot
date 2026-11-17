@@ -19,8 +19,8 @@ import (
 	// 'sgo' as in "stoat go"
 	sgo "github.com/sentinelb51/revoltgo"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
+	_ "modernc.org/sqlite"
 )
 
 //go:embed sql/schema/*.sql
@@ -34,14 +34,14 @@ func connectToDB(migrationsDir string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, err
 	}
-	sebDB, err := sql.Open("sqlite3", dbPath)
+	sebDB, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		slog.Error("failed to open database", slog.Any("err", err))
 		return nil, err
 	}
 
 	goose.SetBaseFS(embedMigrations)
-	if err := goose.SetDialect("sqlite3"); err != nil {
+	if err := goose.SetDialect("sqlite"); err != nil {
 		slog.Error("failed to set goose dialect", slog.Any("err", err))
 		return nil, err
 	}
