@@ -26,7 +26,11 @@ import (
 var embedMigrations embed.FS
 
 func connectToDB(migrationsDir string) (*sql.DB, error) {
-	sebDB, err := sql.Open("sqlite3", "seb.db")
+	dbPath := "data/"
+	if err := os.MkdirAll(dbPath, 0o755); err != nil {
+		return nil, err
+	}
+	sebDB, err := sql.Open("sqlite3", dbPath+"seb.db")
 	if err != nil {
 		slog.Error("failed to open database", slog.Any("err", err))
 		return nil, err
