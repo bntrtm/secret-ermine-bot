@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type SecretSantaEvent struct {
@@ -17,6 +18,16 @@ type SecretSantaEvent struct {
 
 func (sse *SecretSantaEvent) HasStarted() bool {
 	return len(sse.Participants) >= 3
+}
+
+// DistributionDatePast reports whether or not the current date has surpassed
+// the event's distribution date.
+func (sse SecretSantaEvent) DistributionDatePast() bool {
+	distributionDate, err := time.Parse("2006-01-02", sse.DistributionDate)
+	if err != nil {
+		return false
+	}
+	return distributionDate.Before(time.Now())
 }
 
 // assignParticipants shuffles a slice of user IDs
@@ -44,18 +55,20 @@ func (sse *SecretSantaEvent) AssignParticipants(uIDs []string) {
 	}
 }
 
-// PrintParticipantMap outputs the relationships of each participant to each other.
+// GetParticipantMapping outputs the relationships of each participant to each other.
 // EG, for each participant, outputs their giftee and Secret Santa.
-// If a botStore pointer is provided, user IDs in the output will be converted to
-// their human-readable usernames.
-func (sse *SecretSantaEvent) LogParticipantMapping(getName func(uID string) string) string {
+// If bidirectional is 'true', each Santa's own Santa is also noted in each line.
+func (sse *SecretSantaEvent) GetParticipantMapping(getName func(uID string) string, bidirectional bool) string {
 	var output strings.Builder
 	output.WriteString("PARTICIPANT MAPPING:")
 	for uID, p := range sse.Participants {
 		participant := getName(uID)
 		giftee := getName(p.Giftee)
 		santa := getName(p.SecretSanta)
-		fmt.Fprintf(&output, "\n%s is the Secret Santa of giftee: %s. Their Secret Santa is: %s", participant, giftee, santa)
+		fmt.Fprintf(&output, "\n%s is the Secret Santa of giftee: %s.", participant, giftee)
+		if bidirectional {
+			fmt.Fprintf(&output, " Their Secret Santa is: %s", santa)
+		}
 	}
 
 	return output.String()

@@ -100,6 +100,12 @@ func (b *botStore) initCommands() {
 			dmChannelsEnabled:     true,
 			serverChannelsEnabled: true,
 		},
+		"reveal": {
+			name:                  "reveal",
+			description:           "On or after the distribution date of a server event, reveal Secret Santas!",
+			dmChannelsEnabled:     false,
+			serverChannelsEnabled: true,
+		},
 		"ping": {
 			name:                  "ping",
 			description:           "Check websocket latency with this bot.",
