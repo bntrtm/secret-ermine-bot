@@ -1,4 +1,5 @@
 .env
 data/
+scripts/buildx.sh
 
 secret-ermine-bot
