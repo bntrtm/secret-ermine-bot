@@ -312,7 +312,8 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 			}
 		}
 
-		sse.PrintParticipantMapping(getName)
+		mapping := sse.LogParticipantMapping(getName)
+		b.TryServerLogDebug(ctx, mapping)
 	}
 
 	b.Events[ctx.Server.ID] = sse

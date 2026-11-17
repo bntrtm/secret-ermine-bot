@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -292,6 +293,9 @@ func (b *botStore) TryServerLog(logFunc func(sID, msg string, args ...any), ctx 
 // Convenience wrapper calling TryServerLog with an ELogDebug func.
 func (b *botStore) TryServerLogDebug(ctx *Context, msg string, args ...any) {
 	b.TryServerLog(b.logger.ELogDebug, ctx, msg, args)
+	if b.platform == "DEV" {
+		slog.Debug(msg, args...)
+	}
 }
 
 // Convenience wrapper calling TryServerLog with an ELogInfo func.
