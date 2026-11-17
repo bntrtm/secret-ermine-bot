@@ -94,9 +94,44 @@ func (b *botStore) handlerEventMessage(ctx *Context) {
 		} else {
 			content = fmt.Sprintf("I'm an instance of the %s bot!", BotName)
 		}
+	case "reveal":
+		content = b.handleMsgReveal(ctx)
 	default:
 		content = fmt.Sprintf("Unknown command '%s', use *!help* for all available commands.", command)
 	}
+}
+
+func (b *botStore) handleMsgReveal(ctx *Context) string {
+	event, ok := b.Events[ctx.Server.ID]
+	if !ok {
+		return "I could not find an event within the server channel."
+	}
+
+	if !event.HasStarted() {
+		content := "The event has not started yet!"
+		status, err := b.handleMsgStatus(ctx, "")
+		if err != nil {
+			return content
+		} else {
+			return content + "\n" + status
+		}
+	} else if !event.DistributionDatePast() {
+		return "It isn't time to distribute gifts, yet!"
+	}
+
+	getName := func(uID string) string {
+		if ctx.Session != nil {
+			user, err := getUser(ctx.Session, uID)
+			if err != nil {
+				return uID
+			}
+			return user.Mention()
+		} else {
+			return uID
+		}
+	}
+
+	return fmt.Sprintf("Time for the big reveal!\n%s", event.GetParticipantMapping(getName, false))
 }
 
 // handleMsgNew tells the bot it's time for a new Secret Santa Session!
@@ -359,7 +394,7 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 			}
 		}
 
-		mapping := sse.LogParticipantMapping(getName)
+		mapping := sse.GetParticipantMapping(getName, true)
 		b.TryServerLogDebug(ctx, mapping)
 	}
 
