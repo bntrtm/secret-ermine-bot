@@ -151,7 +151,7 @@ func (b *botStore) handleMsgNew(args []string, ctx *Context) (string, error) {
 	newSSE.Notes = strings.Join(notes, " ")
 
 	if err := b.saveEvent(ctx.Server.ID, *newSSE); err != nil {
-		content = "I'm sorry, I couldn't get the event started. Try again later."
+		content = "I'm sorry, I couldn't draft the event. Try again later."
 		return content, fmt.Errorf("could not save event to database: %w", err)
 	}
 
@@ -367,6 +367,10 @@ func (b *botStore) handleMsgStart(ctx *Context) string {
 	err = b.syncEventParticipants(ctx.Server.ID)
 	if err != nil {
 		return "ERROR: could not sync event participants."
+	}
+	if err := b.saveEvent(ctx.Server.ID, sse); err != nil {
+		content := "I'm sorry, I couldn't get the event started. Try again later."
+		return content
 	}
 
 	organizer, err := getEventOrganizer(ctx.Session, sse)
